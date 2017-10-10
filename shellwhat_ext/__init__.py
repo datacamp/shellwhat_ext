@@ -1,3 +1,5 @@
+__version__ = '0.1.0'
+
 def _get_lines_from_file(state, filename):
     '''Return a list of whitespace-stripped lines from a file, or
     fail if the file cannot be found.'''
