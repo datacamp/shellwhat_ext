@@ -23,11 +23,11 @@ def test_compare_file_to_file(state, actualFilename, expectFilename):
     whitespace at the start and end of lines).'''
 
     expectList = _get_lines_from_file(state, expectFilename)
-    return test_compare_file_to_lines(state, actualFilename, expectLines)
+    return test_compare_file_to_lines(state, actualFilename, expectList)
 
 
 @state_dec
-def test_compare_file_to_lines(state, actualFilename, expectLines):
+def test_compare_file_to_lines(state, actualFilename, expectList):
     '''Check if a file is line-by-line equal to a list of lines (ignoring
     whitespace at the start and end of lines).'''
 
