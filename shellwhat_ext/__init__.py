@@ -1,3 +1,5 @@
+import os
+
 __version__ = '0.1.0'
 
 def _get_lines_from_file(state, filename):
@@ -44,3 +46,15 @@ def test_compare_file_to_lines(state, actualFilename, expectLines):
         state.do_test(msg.format(actualFilename, ', '.join([str(x) for x in diffs])))
 
     return state # all good
+
+
+def test_file_perms(state, path, perms, message):
+    '''Test that something has the required permissions.'''
+
+    controls = {'r' : os.R_OK, 'w' : os.W_OK, 'x' : os.X_OK}
+    flags = 0
+    for p in perms:
+        flags += controls[p]
+    if not os.access(path, flags):
+        state.do_test('{} {}'.format(path, message))
+    return state
