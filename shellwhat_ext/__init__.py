@@ -1,4 +1,5 @@
 import os
+from shellwhat.sct_syntax import state_dec
 
 __version__ = '0.1.0'
 
@@ -16,6 +17,7 @@ def _get_lines_from_file(state, filename):
     return lines
 
 
+@state_dec
 def test_compare_file_to_file(state, actualFilename, expectFilename):
     '''Check if a file is line-by-line equal to another file (ignoring
     whitespace at the start and end of lines).'''
@@ -24,6 +26,7 @@ def test_compare_file_to_file(state, actualFilename, expectFilename):
     return test_compare_file_to_lines(state, actualFilename, expectLines)
 
 
+@state_dec
 def test_compare_file_to_lines(state, actualFilename, expectLines):
     '''Check if a file is line-by-line equal to a list of lines (ignoring
     whitespace at the start and end of lines).'''
@@ -48,6 +51,7 @@ def test_compare_file_to_lines(state, actualFilename, expectLines):
     return state # all good
 
 
+@state_dec
 def test_file_perms(state, path, perms, message):
     '''Test that something has the required permissions.'''
 
