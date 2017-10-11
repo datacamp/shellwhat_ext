@@ -23,14 +23,6 @@ def test_compare_file_to_file(state, actualFilename, expectFilename):
     whitespace at the start and end of lines).'''
 
     expectList = _get_lines_from_file(state, expectFilename)
-    return test_compare_file_to_lines(state, actualFilename, expectList)
-
-
-@state_dec
-def test_compare_file_to_lines(state, actualFilename, expectList):
-    '''Check if a file is line-by-line equal to a list of lines (ignoring
-    whitespace at the start and end of lines).'''
-
     actualList = _get_lines_from_file(state, actualFilename)
 
     actualLen = len(actualList)
@@ -60,5 +52,6 @@ def test_file_perms(state, path, perms, message):
     for p in perms:
         flags += controls[p]
     if not os.access(path, flags):
-        state.do_test('{} {}'.format(path, message))
+        actual = oct(os.stat(path).st_mode & 0777)
+        state.do_test('{} {} (actual {})'.format(path, message, actual))
     return state
