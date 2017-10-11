@@ -18,18 +18,21 @@ def _get_lines_from_file(state, filename):
 
 
 @state_dec
-def test_compare_file_to_file(state, actualFilename, expectFilename):
+def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
     '''Check if a file is line-by-line equal to another file (ignoring
     whitespace at the start and end of lines).'''
 
-    expectList = _get_lines_from_file(state, expectFilename)
     actualList = _get_lines_from_file(state, actualFilename)
+    expectList = _get_lines_from_file(state, expectFilename)
 
     actualLen = len(actualList)
     expectLen = len(expectList)
     if actualLen != expectLen:
         msg = 'File {} has wrong length: got {} expected {}'
-        state.do_test(msg.format(actualFilename, actualLen, expectLen))
+        msg = msg.format(actualFilename, actualLen, expectLen)
+        if debug is not None:
+            msg += ' [' + debug + ']'
+        state.do_test(msg)
 
     diffs = []
     for (i, actualLine, expectLine) in zip(range(len(actualList)), actualList, expectList):
@@ -38,7 +41,12 @@ def test_compare_file_to_file(state, actualFilename, expectFilename):
 
     if diffs:
         msg = 'Line(s) in {} not as expected: {}'
-        state.do_test(msg.format(actualFilename, ', '.join([str(x) for x in diffs])))
+        msg = msg.format(actualFilename, ', '.join([str(x) for x in diffs]))
+        if debug is not None:
+            msg += ' [' + debug + ']'
+            msg += ' expect: {}'.format(str(expectList))
+            msg += ' actual: {}'.format(str(actualList))
+        state.do_test(msg)
 
     return state # all good
 
@@ -47,11 +55,14 @@ def test_compare_file_to_file(state, actualFilename, expectFilename):
 def test_file_perms(state, path, perms, message):
     '''Test that something has the required permissions.'''
 
+    if not os.path.exists(path):
+        state.do_test('{} does not exist'.format(path))
     controls = {'r' : os.R_OK, 'w' : os.W_OK, 'x' : os.X_OK}
     flags = 0
     for p in perms:
         flags += controls[p]
     if not os.access(path, flags):
-        actual = oct(os.stat(path).st_mode & 0x1ff)[-3:]
-        state.do_test('{} {} (actual {})'.format(path, message, actual))
+        required = oct(flags)
+        actual = oct(os.stat(path).st_mode & 0x1ff)
+        state.do_test('{} {} (required {} actual {})'.format(path, message, required, actual))
     return state
