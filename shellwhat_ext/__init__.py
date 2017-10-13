@@ -67,3 +67,8 @@ def test_file_perms(state, path, perms, message, debug=None):
         actual = oct(os.stat(path).st_mode & 0x1ff)
         state.do_test('{} {} (required {} actual {})'.format(path, message, required, actual))
     return state
+
+
+@state_dec
+def test_show_student_code(state, msg):
+    state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
