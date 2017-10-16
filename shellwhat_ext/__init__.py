@@ -63,9 +63,7 @@ def test_file_perms(state, path, perms, message, debug=None):
     for p in perms:
         flags += controls[p]
     if not os.access(path, flags):
-        required = oct(flags)
-        actual = oct(os.stat(path).st_mode & 0x1ff)
-        state.do_test('{} {} (required {} actual {})'.format(path, message, required, actual))
+        state.do_test('{} {}'.format(path, message))
     return state
 
 
