@@ -68,5 +68,21 @@ def test_file_perms(state, path, perms, message, debug=None):
 
 
 @state_dec
+def test_output_does_not_contain(state, text, fixed=True, msg='Submission output contains "{}"'):
+    '''Test that the output doesn't match.'''
+
+    if fixed:
+        if text in state.student_result:
+            state.do_test(msg.format(text))
+
+    else:
+        pat = re.compile(text)
+        if text.search(state.student_result):
+            state.do_test(msg.format(text))
+
+    return state
+
+
+@state_dec
 def test_show_student_code(state, msg):
     state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
