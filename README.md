@@ -13,11 +13,10 @@ Its design draws on Python's `optparse` library.
 Its syntax is:
 
 ```
-def test_cmdline(pattern, constraints, redirection=None, msg='Error')
+def test_cmdline(pattern, redirection=None, msg='Error')
 ```
 
 where `pattern` is a pattern that the command line has to match,
-`constraints` specifies extra constraints on the values that the pattern matched,
 `redirection` optionally specifies that redirection to a file is present,
 and `msg` is the error message if the match fails.
 For example:
