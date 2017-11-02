@@ -13,11 +13,11 @@ Its design draws on Python's `optparse` library.
 Its syntax is:
 
 ```
-def test_cmdline(pattern, redirection=None, msg='Error')
+def test_cmdline(pattern, redirect=None, msg='Error')
 ```
 
 where `pattern` is a pattern that the command line has to match,
-`redirection` optionally specifies that redirection to a file is present,
+`redirect` optionally specifies that redirection to a file is present,
 and `msg` is the error message if the match fails.
 For example:
 
@@ -25,7 +25,7 @@ For example:
 test_cmdline([['wc',   'l', '+'],
 	      ['sort', 'nr'],
 	      ['head', 'n:', None, {'n' : 3}]],
-	     redirection=r'.+\.txt',
+	     redirect=r'.+\.txt',
              msg='Incorrect command line')
 ```
 
@@ -41,7 +41,7 @@ and then checking that any extra constraints are also satisfied.
 
 `pattern` is a list of lists that obeys the following rules:
 
-1. If `redirection` is not `None`,
+1. If `redirect` is not `None`,
    then `student` must end with a redirection `>` and a filename,
    and the filename must match the regular expression provided.
 

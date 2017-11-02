@@ -3,19 +3,6 @@ from shellwhat.sct_syntax import state_dec
 
 __version__ = '0.1.0'
 
-def _get_lines_from_file(state, filename):
-    '''Return a list of whitespace-stripped lines from a file, or
-    fail if the file cannot be found.'''
-
-    try:
-        with open(filename, 'r') as stream:
-           lines = [x.strip() for x in stream.readlines()]
-
-    except Exception as err:
-        state.do_test('Unable to open file {}'.format(filename))
-
-    return lines
-
 
 @state_dec
 def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
@@ -86,3 +73,18 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
 @state_dec
 def test_show_student_code(state, msg):
     state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
+
+#-------------------------------------------------------------------------------    
+
+def _get_lines_from_file(state, filename):
+    '''Return a list of whitespace-stripped lines from a file, or
+    fail if the file cannot be found.'''
+
+    try:
+        with open(filename, 'r') as stream:
+           lines = [x.strip() for x in stream.readlines()]
+
+    except Exception as err:
+        state.do_test('Unable to open file {}'.format(filename))
+
+    return lines
