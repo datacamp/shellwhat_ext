@@ -176,7 +176,7 @@ def _cmdline_match_command(state, pattern, actual, debug=None):
     if pat_cmd != actual[0]:
         msg = 'Expected command "{}" got "{}"'.format(pat_cmd, actual[0])
         if debug:
-            msg += ' << {}: pattern ||{}|| actual ||{}|| >>'.format(debug, pattern, actual)
+            msg += ' === {}: student {} pattern ||{}|| actual ||{}|| ==='.format(debug, state.student_result, pattern, actual)
         state.do_test(msg)
 
     # No parameters allowed.
