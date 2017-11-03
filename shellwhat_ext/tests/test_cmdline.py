@@ -296,3 +296,9 @@ def test_overall_pipeline():
 	       ['sort', 'nr'],
 	       ['head', 'n:', None, {'-n' : '3'}]]
     test_cmdline(State(actual), pattern, redirect=re.compile(r'.+\.txt'), msg='Incorrect command line')
+
+
+def test_debug_match_command():
+    actual = 'wc -l'
+    pattern = [['abc',   'l']]
+    test_cmdline(State(actual), pattern, debug='EXTRA MESSAGE')
