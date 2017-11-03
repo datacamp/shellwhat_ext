@@ -217,7 +217,10 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
             if len(extras) == 0:
                 state.do_test('Expected one or more trailing filenames, got none for "{}"'.format(cmd))
         else:
-            assert False, 'Unrecognized string for pattern file spec "{}"'.format(filespec)
+            if len(extras) != 1:
+                state.do_test('Expected one filename "{}", got "{}"'.format(filespec, extras))
+            if extras[0] != filespec:
+                state.do_test('Expected filename "{}", got "{}"'.format(filespec, extras[0]))
     elif isinstance(filespec, list):
         if filespec != extras:
             state.do_test('Filenames differ or not in order for command "{}"'.format(cmd))
@@ -225,7 +228,7 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
         if filespec != set(extras):
             state.do_test('Filenames differ for command "{}"'.format(cmd))
     else:
-        assert False, 'Non-string pattern filespec not yet implemented "{}"'.format(filespec)
+        assert False, 'Filespec "{}" not yet supported'.format(filespec)
 
 
 def _cmdline_check_constraints(state, cmd, constraints, opts):
