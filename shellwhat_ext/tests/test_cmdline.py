@@ -4,6 +4,7 @@ import re
 
 
 PAT_TYPE = type(re.compile('x'))
+PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 
 class State(object):
@@ -80,18 +81,23 @@ def test_parse_result_is_list_of_lists():
 
 
 def test_parse_command_only():
-    chunk = _cmdline_parse_command('a')
-    assert chunk == ['a'], 'Expected command at start of chunk'
+    assert _cmdline_parse_command('a') == ['a'], 'Expected command at start of chunk'
 
 
 def test_parse_command_with_flag_only():
-    chunk = _cmdline_parse_command('a -b')
-    assert chunk == ['a', '-b'], 'Expected command and flag'
+    assert _cmdline_parse_command('a -b') == ['a', '-b'], 'Expected command and flag'
 
 
 def test_parse_command_with_flag_and_argument():
-    chunk = _cmdline_parse_command('a -b c')
-    assert chunk == ['a', '-b', 'c'], 'Expected command, flag, and argument'
+    assert _cmdline_parse_command('a -b c') == ['a', '-b', 'c'], 'Expected command, flag, and argument'
+
+
+def test_parse_command_with_single_quoted_argument():
+    assert _cmdline_parse_command("a -b 'single quoted' -c") == ['a', '-b', 'single quoted', '-c']
+
+
+def test_parse_command_with_double_quoted_argument():
+    assert _cmdline_parse_command('a -b "double quoted"') == ['a', '-b', 'double quoted']
 
 
 def test_match_redirect_none_with_empty():
@@ -222,6 +228,23 @@ def test_constraint_callable_mismatch():
         _cmdline_match_command(State(), ['a', 'n:', None, {'-n' : lambda x: len(x) == 1}], ['a', '-n', 'XYZ'])
 
 
+def test_overall_command_only_match():
+    t_cmdline(State('a'), [['a']])
+
+
+def test_overall_command_only_mismatch():
+    with pytest.raises(Exception):
+        t_cmdline(State('a'), [['b']])
+
+
+def test_overall_pipeline():
+    actual = 'wc -l a.txt b.txt "c.txt d.txt" | sort -n -r | head -n 3 > result.txt'
+    pattern = [['wc',   'l', '+'],
+	       ['sort', 'nr'],
+	       ['head', 'n:', None, {'-n' : '3'}]]
+    t_cmdline(State(actual), pattern, redirect=re.compile(r'.+\.txt'), msg='Incorrect command line')
+             
+
 #-------------------------------------------------------------------------------
 
 
@@ -274,7 +297,13 @@ def _cmdline_match_redirect(state, pattern, actual):
 
 
 def _cmdline_parse_command(text):
-    return text.split() # FIXME: need to handle quoted strings as parameters
+    return [_cmdline_strip_quotes(a) for a in PAT_ARGS.findall(text)]
+
+
+def _cmdline_strip_quotes(val):
+    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+        val = val[1:-1]
+    return val
 
 
 def _cmdline_match_all_commands(state, pattern, actual):

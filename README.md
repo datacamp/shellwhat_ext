@@ -24,8 +24,8 @@ For example:
 ```
 test_cmdline([['wc',   'l', '+'],
 	      ['sort', 'nr'],
-	      ['head', 'n:', None, {'n' : 3}]],
-	     redirect=r'.+\.txt',
+	      ['head', 'n:', None, {'-n' : '3'}]],
+	     redirect=re.compile(r'.+\.txt'),
              msg='Incorrect command line')
 ```
 
