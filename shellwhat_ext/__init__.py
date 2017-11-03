@@ -100,14 +100,14 @@ PAT_TYPE = type(re.compile('x'))
 PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 @state_dec
-def test_cmdline(state, pattern, redirect=None, msg='Error'):
-    actualCommands, actualRedirect = _cmdline_parse(state)
-    _cmdline_match_redirect(state, redirect, actualRedirect)
-    _cmdline_match_all_commands(state, pattern, actualCommands)
+def test_cmdline(state, pattern, redirect=None, msg='Error', debug=False):
+    actualCommands, actualRedirect = _cmdline_parse(state, debug=debug)
+    _cmdline_match_redirect(state, redirect, actualRedirect, debug=debug)
+    _cmdline_match_all_commands(state, pattern, actualCommands, debug=debug)
     return state
 
 
-def _cmdline_parse(state):
+def _cmdline_parse(state, debug=False):
     stripped, redirect = _cmdline_get_redirect(state)
     commands = [_cmdline_parse_command(c.strip()) for c in stripped.strip().split('|')]
     return commands, redirect
@@ -136,7 +136,7 @@ def _cmdline_get_redirect(state):
     return pre, post
 
 
-def _cmdline_match_redirect(state, pattern, actual):
+def _cmdline_match_redirect(state, pattern, actual, debug=debug):
     if pattern is None:
         if actual:
             state.do_test('Redirect found when none expected "{}"'.format(actual))
@@ -158,14 +158,14 @@ def _cmdline_strip_quotes(val):
     return val
 
 
-def _cmdline_match_all_commands(state, pattern, actual):
+def _cmdline_match_all_commands(state, pattern, actual, debug=debug):
     if len(pattern) != len(actual):
         state.do_test('Unexpected number of components in command line: expected "{}" found "{}"'.format(len(pattern), len(actual)))
     for (p, a) in zip(pattern, actual):
-        _cmdline_match_command(state, p, a)
+        _cmdline_match_command(state, p, a, debug=debug)
 
 
-def _cmdline_match_command(state, pattern, actual):
+def _cmdline_match_command(state, pattern, actual, debug=debug):
 
     # Command.
     assert len(pattern) > 0, 'Pattern must have at least a command name'
@@ -174,7 +174,10 @@ def _cmdline_match_command(state, pattern, actual):
     # Disassemble pattern.
     pat_cmd, pat_optstring, pat_filespec, pat_constraints = _cmdline_disassemble_pattern(pattern)
     if pat_cmd != actual[0]:
-        state.do_test('Expected command "{}" got "{}"'.format(pat_cmd, actual[0]))
+        d = ''
+        if debug:
+            d = ' << pattern ||{}|| actual ||{}|| >>'.format(pattern, actual)
+        state.do_test('Expected command "{}" got "{}"'.format(pat_cmd, actual[0]) + d)
 
     # No parameters allowed.
     if pat_optstring is None:
