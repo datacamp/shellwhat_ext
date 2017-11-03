@@ -101,21 +101,20 @@ PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 @state_dec
 def test_cmdline(state, pattern, redirect=None, msg='Error', debug=None):
-    actualCommands, actualRedirect = _cmdline_parse(state, debug=debug)
+    text = state.student_code
+    actualCommands, actualRedirect = _cmdline_parse(state, text, debug=debug)
     _cmdline_match_redirect(state, redirect, actualRedirect, debug=debug)
     _cmdline_match_all_commands(state, pattern, actualCommands, debug=debug)
     return state
 
 
-def _cmdline_parse(state, debug=None):
-    stripped, redirect = _cmdline_get_redirect(state)
+def _cmdline_parse(state, text, debug=None):
+    stripped, redirect = _cmdline_get_redirect(state, text)
     commands = [_cmdline_parse_command(c.strip()) for c in stripped.strip().split('|')]
     return commands, redirect
 
 
-def _cmdline_get_redirect(state):
-
-    text = state.student_result
+def _cmdline_get_redirect(state, text):
 
     if '>' not in text:
         return text, None
@@ -176,7 +175,7 @@ def _cmdline_match_command(state, pattern, actual, debug=None):
     if pat_cmd != actual[0]:
         msg = 'Expected command "{}" got "{}"'.format(pat_cmd, actual[0])
         if debug:
-            msg += ' === {}: student {} pattern ||{}|| actual ||{}|| ==='.format(debug, state.student_result, pattern, actual)
+            msg += ' === {}: student {} pattern ||{}|| actual ||{}|| ==='.format(debug, state.student_code, pattern, actual)
         state.do_test(msg)
 
     # No parameters allowed.
