@@ -207,6 +207,53 @@ def test_match_command_trailing_files_plus_allowed_none_provided():
         _cmdline_match_command(State(), ['a', 'b', '+'], ['a', '-b'])
 
 
+def test_match_command_filename_list_match():
+    _cmdline_match_command(State(), ['a', '', ['first.txt', 'second.txt']], ['a', 'first.txt', 'second.txt'])
+
+
+def test_match_command_filename_list_wrong_order():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', ['first.txt', 'second.txt']], ['a', 'second.txt', 'first.txt'])
+
+
+def test_match_command_filename_list_too_short():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', ['first.txt']], ['a', 'second.txt', 'first.txt'])
+
+
+def test_match_command_filename_list_too_long():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', ['first.txt', 'second.txt']], ['a', 'first.txt'])
+
+
+def test_match_command_filename_list_wrong_names():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', ['first.txt', 'second.txt']], ['a', 'first.txt', 'third.txt'])
+
+
+def test_match_command_filename_set_match_in_order():
+    _cmdline_match_command(State(), ['a', '', {'first.txt', 'second.txt'}], ['a', 'first.txt', 'second.txt'])
+
+
+def test_match_command_filename_set_match_wrong_order():
+    _cmdline_match_command(State(), ['a', '', {'first.txt', 'second.txt'}], ['a', 'second.txt', 'first.txt'])
+
+
+def test_match_command_filename_set_too_short():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', {'first.txt'}], ['a', 'second.txt', 'first.txt'])
+
+
+def test_match_command_filename_set_too_long():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', {'first.txt', 'second.txt'}], ['a', 'first.txt'])
+
+
+def test_match_command_filename_set_wrong_names():
+    with pytest.raises(Exception):
+        _cmdline_match_command(State(), ['a', '', {'first.txt', 'second.txt'}], ['a', 'first.txt', 'third.txt'])
+
+
 def test_constraint_text_match():
     _cmdline_match_command(State(), ['a', 'n:', None, {'-n' : '3'}], ['a', '-n', '3'])
 
