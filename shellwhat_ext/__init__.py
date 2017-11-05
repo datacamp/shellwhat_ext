@@ -3,7 +3,7 @@ import re
 from getopt import getopt
 from shellwhat.sct_syntax import state_dec
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 #-------------------------------------------------------------------------------
 
@@ -228,12 +228,12 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
         for (f, e) in zip(filespec, extras):
             if isinstance(f, str):
                 if f != e:
-                    state.do_test('Filenames differ or not in order for command "{}"'.format(cmd))
+                    state.do_test('Filenames differ or not in order in list for command "{}"'.format(cmd))
             elif type(f) == PAT_TYPE:
                 if not re.search(f, e):
-                    state.do_test('Filenames differ or not in order for command "{}" ("{}" vs pattern "{}")'.format(cmd, e, f))
+                    state.do_test('Filenames differ or not in order in list for command "{}" ("{}" vs pattern "{}")'.format(cmd, e, f))
             else:
-                assert False, 'Filespec "{}" not yet supported'.format(filespec)
+                assert False, 'Filespec "{}" not yet supported in list'.format(filespec)
     elif isinstance(filespec, set):
         if filespec != set(extras):
             state.do_test('Filenames differ for command "{}"'.format(cmd))
