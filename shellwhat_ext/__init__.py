@@ -208,9 +208,13 @@ def _cmdline_disassemble_pattern(pattern):
 
 
 def _cmdline_check_filenames(state, cmd, filespec, extras):
+
+    # Nothing allowed.
     if filespec is None:
         if extras:
             state.do_test('Unexpected trailing filenames "{}" for "{}"'.format(extras, cmd))
+
+    # Filespec is a single string '*' (for zero or more) '+' (for one or more) or a filename.
     elif isinstance(filespec, str):
         if filespec == '*':
             pass
@@ -222,6 +226,15 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
                 state.do_test('Expected one filename "{}", got "{}"'.format(filespec, extras))
             if extras[0] != filespec:
                 state.do_test('Expected filename "{}", got "{}"'.format(filespec, extras[0]))
+
+    # Filespec is a single regular expression.
+    elif type(filespec) == PAT_TYPE:
+        if len(extras) != 1:
+            state.do_test('Expected one filename for "{}", got "{}"'.format(cmd, extras))
+        if not re.search(filespec, extras[0]):
+            state.do_test('Filename "{}" does not match pattern "{}"'.format(extras[0], filespec.pattern))
+
+    # Filespec is a list of strings or regular expressions that must match in order.
     elif isinstance(filespec, list):
         if len(filespec) != len(extras):
             state.do_test('Wrong number of filename arguments for "{}"'.format(cmd))
@@ -234,9 +247,13 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
                     state.do_test('Filenames differ or not in order in list for command "{}" ("{}" vs pattern "{}")'.format(cmd, e, f))
             else:
                 assert False, 'Filespec "{}" not yet supported in list'.format(filespec)
+
+    # Filespec is a set of strings that must match all match (in any order).
     elif isinstance(filespec, set):
         if filespec != set(extras):
             state.do_test('Filenames differ for command "{}"'.format(cmd))
+
+    # Filespec isn't supported yet.
     else:
         assert False, 'Filespec "{}" not yet supported'.format(filespec)
 
