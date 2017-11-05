@@ -101,20 +101,21 @@ PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 @state_dec
 def test_cmdline(state, pattern, redirect=None, msg='Error', debug=None):
-    text = state.student_code
-    actualCommands, actualRedirect = _cmdline_parse(state, text, debug=debug)
+    actualCommands, actualRedirect = _cmdline_parse(state, debug=debug)
     _cmdline_match_redirect(state, redirect, actualRedirect, debug=debug)
     _cmdline_match_all_commands(state, pattern, actualCommands, debug=debug)
     return state
 
 
-def _cmdline_parse(state, text, debug=None):
-    stripped, redirect = _cmdline_get_redirect(state, text)
+def _cmdline_parse(state, debug=None):
+    stripped, redirect = _cmdline_get_redirect(state)
     commands = [_cmdline_parse_command(c.strip()) for c in stripped.strip().split('|')]
     return commands, redirect
 
 
-def _cmdline_get_redirect(state, text):
+def _cmdline_get_redirect(state):
+
+    text = state.student_code
 
     if '>' not in text:
         return text, None
@@ -222,8 +223,17 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
             if extras[0] != filespec:
                 state.do_test('Expected filename "{}", got "{}"'.format(filespec, extras[0]))
     elif isinstance(filespec, list):
-        if filespec != extras:
-            state.do_test('Filenames differ or not in order for command "{}"'.format(cmd))
+        if len(filespec) != len(extras):
+            state.do_test('Wrong number of filename arguments for "{}"'.format(cmd))
+        for (f, e) in zip(filespec, extras):
+            if isinstance(f, str):
+                if f != e:
+                    state.do_test('Filenames differ or not in order for command "{}"'.format(cmd))
+            elif type(f) == PAT_TYPE:
+                if not re.search(f, e):
+                    state.do_test('Filenames differ or not in order for command "{}" ("{}" vs pattern "{}")'.format(cmd, e, f))
+            else:
+                assert False, 'Filespec "{}" not yet supported'.format(filespec)
     elif isinstance(filespec, set):
         if filespec != set(extras):
             state.do_test('Filenames differ for command "{}"'.format(cmd))

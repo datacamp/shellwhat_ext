@@ -14,8 +14,8 @@ from shellwhat_ext import \
     _cmdline_check_constraints
 
 class State(object):
-    def __init__(self, student_result=''):
-        self.student_result = student_result
+    def __init__(self, student_code=''):
+        self.student_code = student_code
 
     def do_test(self, msg):
         raise Exception(msg)
@@ -231,6 +231,18 @@ def test_match_command_filename_list_wrong_names():
         _cmdline_match_command(State(), ['a', '', ['first.txt', 'second.txt']], ['a', 'first.txt', 'third.txt'])
 
 
+def test_match_command_filename_re_match_simple():
+    _cmdline_match_command(State(), ['a', '', [re.compile(r'first\.txt')]], ['a', 'first.txt'])
+
+
+def test_match_command_filename_re_match_pattern():
+    _cmdline_match_command(State(), ['a', '', [re.compile(r'.+\.txt')]], ['a', 'first.txt'])
+
+
+def test_match_command_filename_re_match_trailing():
+    _cmdline_match_command(State(), ['cp', '', ['first.txt', re.compile(r'dir/?')]], ['cp', 'first.txt', 'dir/'])
+
+
 def test_match_command_filename_set_match_in_order():
     _cmdline_match_command(State(), ['a', '', {'first.txt', 'second.txt'}], ['a', 'first.txt', 'second.txt'])
 
@@ -299,6 +311,7 @@ def test_overall_pipeline():
 
 
 def test_debug_match_command():
-    actual = 'wc -l'
     pattern = [['abc',   'l']]
-    test_cmdline(State(actual), pattern, debug='EXTRA MESSAGE')
+    actual = 'wc -l'
+    with pytest.raises(Exception):
+        test_cmdline(State(actual), pattern, debug='EXTRA MESSAGE')
