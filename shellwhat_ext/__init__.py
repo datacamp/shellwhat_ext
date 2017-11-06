@@ -254,7 +254,7 @@ def _cmdline_check_filenames(state, cmd, filespec, extras, msg=None, debug=None)
     # Filespec is a set of strings that must match all match (in any order).
     elif isinstance(filespec, set):
         if filespec != set(extras):
-            _cmdline_fail(state, 'Filenames differ for command "{}": spec "{}" vs. actual "{}"'.format(cmd), msg, debug, filespec, extras)
+            _cmdline_fail(state, 'Filenames differ for command "{}": spec "{}" vs. actual "{}"'.format(cmd, filespec, extras), msg, debug)
 
     # Filespec isn't supported yet.
     else:
