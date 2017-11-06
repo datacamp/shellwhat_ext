@@ -99,53 +99,53 @@ def test_show_student_code(state, msg):
 PAT_TYPE = type(re.compile('x'))
 PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
-@state_dec
-def test_cmdline(state, pattern, redirect=None, msg='Error', debug=None):
-    actualCommands, actualRedirect = _cmdline_parse(state, debug=debug)
-    _cmdline_match_redirect(state, redirect, actualRedirect, debug=debug)
-    _cmdline_match_all_commands(state, pattern, actualCommands, debug=debug)
+# @state_dec
+def test_cmdline(state, pattern, redirect=None, msg=None, debug=None):
+    actualCommands, actualRedirect = _cmdline_parse(state, msg, debug=debug)
+    _cmdline_match_redirect(state, redirect, actualRedirect, msg, debug=debug)
+    _cmdline_match_all_commands(state, pattern, actualCommands, msg, debug=debug)
     return state
 
 
-def _cmdline_parse(state, debug=None):
-    stripped, redirect = _cmdline_get_redirect(state)
+def _cmdline_parse(state, msg=None, debug=None):
+    stripped, redirect = _cmdline_get_redirect(state, msg)
     commands = [_cmdline_parse_command(c.strip()) for c in stripped.strip().split('|')]
     return commands, redirect
 
 
-def _cmdline_get_redirect(state):
+def _cmdline_get_redirect(state, msg=None):
 
     text = state.student_code
 
     if '>' not in text:
         return text, None
     if text.count('>') > 1:
-        state.do_test('Command line can contain at most one ">"')
+        _cmdline_fail(state, 'Command line can contain at most one ">"', msg)
 
     pre, post = [x.strip() for x in text.split('>')]
 
     if not pre:
-        state.do_test('Line cannot start with redirection')
+        _cmdline_fail(state, 'Line cannot start with redirection', msg)
     if not post:
-        state.do_test('Dangling ">" at end of line')
+        _cmdline_fail(state, 'Dangling ">" at end of line', msg)
     if '|' in post:
-        state.do_test('Cannot redirect to something containing a pipe "{}".format(post)')
+        _cmdline_fail(state, 'Cannot redirect to something containing a pipe "{}".format(post)', msg)
     if ' ' in post:
-        state.do_test('Cannot redirect to something containin spaces "{}"'.format(post))
+        _cmdline_fail(state, 'Cannot redirect to something containin spaces "{}"'.format(post), msg)
 
     return pre, post
 
 
-def _cmdline_match_redirect(state, pattern, actual, debug=None):
+def _cmdline_match_redirect(state, pattern, actual, msg=None, debug=None):
     if pattern is None:
         if actual:
-            state.do_test('Redirect found when none expected "{}"'.format(actual))
+            _cmdline_fail(state, 'Redirect found when none expected "{}"'.format(actual), msg, debug)
     elif isinstance(pattern, str):
         if pattern != actual:
-            state.do_test('Pattern "{}" does not match actual "{}"'.format(pattern, actual))
+            _cmdline_fail(state, 'Pattern "{}" does not match actual "{}"'.format(pattern, actual), msg, debug)
     elif type(pattern) == PAT_TYPE:
         if not pattern.search(actual):
-            state.do_test('Regular expression "{}" does not match actual "{}"'.format(pattern.pattern, actual))
+            _cmdline_fail(state, 'Regular expression "{}" does not match actual "{}"'.format(pattern.pattern, actual), msg, debug)
 
 
 def _cmdline_parse_command(text):
@@ -158,14 +158,14 @@ def _cmdline_strip_quotes(val):
     return val
 
 
-def _cmdline_match_all_commands(state, pattern, actual, debug=None):
+def _cmdline_match_all_commands(state, pattern, actual, msg=None, debug=None):
     if len(pattern) != len(actual):
-        state.do_test('Unexpected number of components in command line: expected "{}" found "{}"'.format(len(pattern), len(actual)))
+        _cmdline_fail(state, 'Unexpected number of components in command line: expected "{}" found "{}"'.format(len(pattern), len(actual)), msg, debug)
     for (p, a) in zip(pattern, actual):
-        _cmdline_match_command(state, p, a, debug=debug)
+        _cmdline_match_command(state, p, a, msg, debug=debug)
 
 
-def _cmdline_match_command(state, pattern, actual, debug=None):
+def _cmdline_match_command(state, pattern, actual, msg=None, debug=None):
 
     # Command.
     assert len(pattern) > 0, 'Pattern must have at least a command name'
@@ -174,25 +174,22 @@ def _cmdline_match_command(state, pattern, actual, debug=None):
     # Disassemble pattern.
     pat_cmd, pat_optstring, pat_filespec, pat_constraints = _cmdline_disassemble_pattern(pattern)
     if pat_cmd != actual[0]:
-        msg = 'Expected command "{}" got "{}"'.format(pat_cmd, actual[0])
-        if debug:
-            msg += ' === {}: student {} pattern ||{}|| actual ||{}|| ==='.format(debug, state.student_code, pattern, actual)
-        state.do_test(msg)
+        _cmdline_fail(state, 'Expected command "{}" got "{}"'.format(pat_cmd, actual[0]), msg, debug)
 
     # No parameters allowed.
     if pat_optstring is None:
         if len(actual) > 1:
-            state.do_test('Pattern does not allow parameters but actual command contains some "{}"'.format(actual))
+            _cmdline_fail(state, 'Pattern does not allow parameters but actual command contains some "{}"'.format(actual), msg, debug)
         return state
 
     # Get actual flags, their arguments, and trailing filenames.
     actual_opts, actual_extras = getopt(actual[1:], pat_optstring)
 
     # Check trailing filenames both ways.
-    _cmdline_check_filenames(state, pat_cmd, pat_filespec, actual_extras)
+    _cmdline_check_filenames(state, pat_cmd, pat_filespec, actual_extras, msg, debug)
 
     # Check constraints.
-    _cmdline_check_constraints(state, pat_cmd, pat_constraints, actual_opts)
+    _cmdline_check_constraints(state, pat_cmd, pat_constraints, actual_opts, msg, debug)
 
 
 def _cmdline_disassemble_pattern(pattern):
@@ -207,12 +204,12 @@ def _cmdline_disassemble_pattern(pattern):
     return cmd, optstring, filespec, constraints
 
 
-def _cmdline_check_filenames(state, cmd, filespec, extras):
+def _cmdline_check_filenames(state, cmd, filespec, extras, msg=None, debug=None):
 
     # Nothing allowed.
     if filespec is None:
         if extras:
-            state.do_test('Unexpected trailing filenames "{}" for "{}"'.format(extras, cmd))
+            _cmdline_fail(state, 'Unexpected trailing filenames "{}" for "{}"'.format(extras, cmd), msg, debug)
 
     # Filespec is a single string '*' (for zero or more) '+' (for one or more) or a filename.
     elif isinstance(filespec, str):
@@ -220,45 +217,45 @@ def _cmdline_check_filenames(state, cmd, filespec, extras):
             pass
         elif filespec == '+':
             if len(extras) == 0:
-                state.do_test('Expected one or more trailing filenames, got none for "{}"'.format(cmd))
+                _cmdline_fail(state, 'Expected one or more trailing filenames, got none for "{}"'.format(cmd), msg, debug)
         else:
             if len(extras) != 1:
-                state.do_test('Expected one filename "{}", got "{}"'.format(filespec, extras))
+                _cmdline_fail(state, 'Expected one filename "{}", got "{}"'.format(filespec, extras), msg, debug)
             if extras[0] != filespec:
-                state.do_test('Expected filename "{}", got "{}"'.format(filespec, extras[0]))
+                _cmdline_fail(state, 'Expected filename "{}", got "{}"'.format(filespec, extras[0]), msg, debug)
 
     # Filespec is a single regular expression.
     elif type(filespec) == PAT_TYPE:
         if len(extras) != 1:
-            state.do_test('Expected one filename for "{}", got "{}"'.format(cmd, extras))
+            _cmdline_fail(state, 'Expected one filename for "{}", got "{}"'.format(cmd, extras), msg, debug)
         if not re.search(filespec, extras[0]):
-            state.do_test('Filename "{}" does not match pattern "{}"'.format(extras[0], filespec.pattern))
+            _cmdline_fail(state, 'Filename "{}" does not match pattern "{}"'.format(extras[0], filespec.pattern), msg, debug)
 
     # Filespec is a list of strings or regular expressions that must match in order.
     elif isinstance(filespec, list):
         if len(filespec) != len(extras):
-            state.do_test('Wrong number of filename arguments for "{}"'.format(cmd))
+            _cmdline_fail(state, 'Wrong number of filename arguments for "{}"'.format(cmd), msg, debug)
         for (f, e) in zip(filespec, extras):
             if isinstance(f, str):
                 if f != e:
-                    state.do_test('Filenames differ or not in order in list for command "{}"'.format(cmd))
+                    _cmdline_fail(state, 'Filenames differ or not in order in list for command "{}"'.format(cmd), msg, debug)
             elif type(f) == PAT_TYPE:
                 if not re.search(f, e):
-                    state.do_test('Filenames differ or not in order in list for command "{}" ("{}" vs pattern "{}")'.format(cmd, e, f))
+                    _cmdline_fail(state, 'Filenames differ or not in order in list for command "{}" ("{}" vs pattern "{}")'.format(cmd, e, f), msg, debug)
             else:
                 assert False, 'Filespec "{}" not yet supported in list'.format(filespec)
 
     # Filespec is a set of strings that must match all match (in any order).
     elif isinstance(filespec, set):
         if filespec != set(extras):
-            state.do_test('Filenames differ for command "{}"'.format(cmd))
+            _cmdline_fail(state, 'Filenames differ for command "{}"'.format(cmd), msg, debug)
 
     # Filespec isn't supported yet.
     else:
         assert False, 'Filespec "{}" not yet supported'.format(filespec)
 
 
-def _cmdline_check_constraints(state, cmd, constraints, opts):
+def _cmdline_check_constraints(state, cmd, constraints, opts, msg=None, debug=None):
     if constraints is None:
         return
     for (opt, arg) in opts:
@@ -266,10 +263,17 @@ def _cmdline_check_constraints(state, cmd, constraints, opts):
             required = constraints[opt]
             if callable(required):
                 if not required(arg):
-                    state.do_test('Argument "{}" of flag "{}" for "{}" failed test'.format(arg, opt, cmd))
+                    _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" failed test'.format(arg, opt, cmd), msg, debug)
             elif type(required) == PAT_TYPE:
                 if not required.search(arg):
-                    state.do_test('Argument "{}" of flag "{}" for "{}" does not match pattern "{}"'.format(arg, opt, cmd, required.pattern))
+                    _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match pattern "{}"'.format(arg, opt, cmd, required.pattern), msg, debug)
             else:
                 if arg != required:
-                    state.do_test('Argument "{}" of flag "{}" for "{}" does not match required "{}"'.format(arg, opt, cmd, required))
+                    _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match required "{}"'.format(arg, opt, cmd, required), msg, debug)
+
+
+def _cmdline_fail(state, internal, external, debug):
+    report = external if external else ''
+    if debug:
+        report = '{} ({})'.format(report, internal)
+    state.do_test(report)
