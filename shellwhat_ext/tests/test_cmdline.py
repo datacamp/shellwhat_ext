@@ -2,6 +2,7 @@ import re
 import pytest
 from shellwhat_ext import \
     test_cmdline, \
+    _cmdline_select_line, \
     _cmdline_parse, \
     _cmdline_get_redirect, \
     _cmdline_match_redirect, \
@@ -21,68 +22,101 @@ class State(object):
         raise Exception(msg)
 
 
+def test_select_line_single_line_false():
+    text = 'a'
+    assert _cmdline_select_line(State(text), False) == 'a'
+
+
+def test_select_line_single_line_true():
+    text = 'a'
+    assert _cmdline_select_line(State(text), True) == 'a'
+
+
+def test_select_line_multi_line_false():
+    text = 'a\nb\n'
+    assert _cmdline_select_line(State(text), False) == 'a\nb'
+
+
+def test_select_line_single_line_true():
+    text = 'a\nb\n'
+    assert _cmdline_select_line(State(text), True) == 'b'
+
+
 def test_redirect_not_found():
-    _, redirect = _cmdline_get_redirect(State('a'))
+    text = 'a'
+    _, redirect = _cmdline_get_redirect(State(text), text)
     assert redirect is None
 
 
 def test_redirect_found_with_spaces():
-    _, redirect = _cmdline_get_redirect(State('a > d'))
+    text = 'a > d'
+    _, redirect = _cmdline_get_redirect(State(text), text)
     assert redirect == 'd'
 
 
 def test_redirect_found_without_spaces():
-    _, redirect = _cmdline_get_redirect(State('a>d'))
+    text = 'a>d'
+    _, redirect = _cmdline_get_redirect(State(text), text)
     assert redirect == 'd'
 
 
 def test_redirect_double():
+    text = 'a > d > e'
     with pytest.raises(Exception):
-        _cmdline_get_redirect(State('a > d > e'))
+        _cmdline_get_redirect(State(text), text)
 
 
 def test_redirect_before_pipe():
+    text = 'a > d | e'
     with pytest.raises(Exception):
-        _cmdline_get_redirect(State('a > d | e'))
+        _cmdline_get_redirect(State(text), text)
 
 
 def test_redirect_dangling():
+    text = 'a >'
     with pytest.raises(Exception):
-        _cmdline_get_redirect(State('a >'))
+        _cmdline_get_redirect(State(text), text)
 
 
 def test_redirect_to_command():
+    text = 'a > b c'
     with pytest.raises(Exception):
-        _cmdline_get_redirect(State('a > b c'))
+        _cmdline_get_redirect(State(text), text)
 
 
 def test_redirect_cannot_open():
+    text = '> b'
     with pytest.raises(Exception):
-        _cmdline_get_redirect(State('> b'))
+        _cmdline_get_redirect(State(text), text)
 
 
 def test_parse_length_1_no_args():
-    commands, _ = _cmdline_parse(State('a'))
+    text = 'a'
+    commands, _ = _cmdline_parse(State(text), text)
     assert len(commands) == 1, 'Expected to find one command'
 
 
 def test_parse_length_3_no_args():
-    commands, _ = _cmdline_parse(State('a | b | c'))
+    text = 'a | b | c'
+    commands, _ = _cmdline_parse(State(text), text)
     assert len(commands) == 3, 'Expected to find three commands'
 
 
 def test_parse_length_1_with_args():
-    commands, _ = _cmdline_parse(State('a -b c'))
+    text = 'a -b c'
+    commands, _ = _cmdline_parse(State(text), text)
     assert len(commands) == 1, 'Expected to find one command'
 
 
 def test_parse_length_3_with_args():
-    commands, _ = _cmdline_parse(State('a -b c | d -e | f'))
+    text = 'a -b c | d -e | f'
+    commands, _ = _cmdline_parse(State(text), text)
     assert len(commands) == 3, 'Expected to find three commands'
 
 
 def test_parse_result_is_list_of_lists():
-    commands, _ = _cmdline_parse(State('a -b c | d -e | f'))
+    text = 'a -b c | d -e | f'
+    commands, _ = _cmdline_parse(State(text), text)
     assert all([type(c) == list for c in commands]), 'Expected all parsed elements to be lists'
 
 

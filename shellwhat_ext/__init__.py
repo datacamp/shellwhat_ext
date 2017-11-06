@@ -99,23 +99,29 @@ def test_show_student_code(state, msg):
 PAT_TYPE = type(re.compile('x'))
 PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
-# @state_dec
-def test_cmdline(state, pattern, redirect=None, msg=None, debug=None):
-    actualCommands, actualRedirect = _cmdline_parse(state, msg, debug=debug)
+@state_dec
+def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug=None):
+    line = _cmdline_select_line(state, last_line)
+    actualCommands, actualRedirect = _cmdline_parse(state, line, msg, debug=debug)
     _cmdline_match_redirect(state, redirect, actualRedirect, msg, debug=debug)
     _cmdline_match_all_commands(state, pattern, actualCommands, msg, debug=debug)
     return state
 
 
-def _cmdline_parse(state, msg=None, debug=None):
-    stripped, redirect = _cmdline_get_redirect(state, msg)
+def _cmdline_select_line(state, last_line):
+    line = state.student_code.strip()
+    if last_line:
+        line = line.split('\n')[-1]
+    return line
+
+
+def _cmdline_parse(state, line, msg=None, debug=None):
+    stripped, redirect = _cmdline_get_redirect(state, line, msg)
     commands = [_cmdline_parse_command(c.strip()) for c in stripped.strip().split('|')]
     return commands, redirect
 
 
-def _cmdline_get_redirect(state, msg=None):
-
-    text = state.student_code
+def _cmdline_get_redirect(state, text, msg=None):
 
     if '>' not in text:
         return text, None
