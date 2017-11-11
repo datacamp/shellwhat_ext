@@ -83,7 +83,7 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
 
     else:
         pat = re.compile(text)
-        if text.search(state.student_result):
+        if pat.search(state.student_result):
             state.do_test(msg.format(text))
 
     return state
