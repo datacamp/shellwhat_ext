@@ -284,6 +284,9 @@ def _cmdline_check_constraints(state, cmd, constraints, opts, msg=None, debug=No
             else:
                 if arg != required:
                     _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match required "{}"'.format(arg, opt, cmd, required), msg, debug)
+            del constraints[opt]
+    if constraints:
+        _cmdline_fail(state, 'Missing flag(s)'.format(cmd, ', '.join(constraints.keys())), msg, debug)
 
 
 def _cmdline_fail(state, internal, external, debug):
