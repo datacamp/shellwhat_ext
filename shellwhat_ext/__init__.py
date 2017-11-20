@@ -11,7 +11,8 @@ __version__ = '0.1.1'
 @state_dec
 def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
     '''Check if a file is line-by-line equal to another file (ignoring
-    whitespace at the start and end of lines).'''
+    whitespace at the start and end of lines and blank lines at the
+    ends of files).'''
 
     actualList = _get_lines_from_file(state, actualFilename)
     expectList = _get_lines_from_file(state, expectFilename)
@@ -41,15 +42,18 @@ def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None)
 
 
 def _get_lines_from_file(state, filename):
-    '''Return a list of whitespace-stripped lines from a file, or
-    fail if the file cannot be found.'''
+    '''Return a list of whitespace-stripped lines from a file, or fail if
+    the file cannot be found.  Remove blank lines from the end of the
+    file.'''
 
     try:
         with open(filename, 'r') as stream:
            lines = [x.strip() for x in stream.readlines()]
-
     except Exception as err:
         state.do_test('Unable to open file {}'.format(filename))
+
+    while not lines[-1]:
+        del lines[-1]
 
     return lines
 
