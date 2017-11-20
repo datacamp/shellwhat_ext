@@ -1,6 +1,7 @@
 import os
 import re
-from getopt import getopt
+from getopt import getopt, GetoptError
+from protowhat.Test import TestFail
 from shellwhat.sct_syntax import state_dec
 
 __version__ = '0.1.1'
@@ -189,7 +190,10 @@ def _cmdline_match_command(state, pattern, actual, msg=None, debug=None):
         return state
 
     # Get actual flags, their arguments, and trailing filenames.
-    actual_opts, actual_extras = getopt(actual[1:], pat_optstring)
+    try:
+        actual_opts, actual_extras = getopt(actual[1:], pat_optstring)
+    except GetoptError as e:
+        raise TestFail(e)
 
     # Check trailing filenames both ways.
     _cmdline_check_filenames(state, pat_cmd, pat_filespec, actual_extras, msg, debug)
