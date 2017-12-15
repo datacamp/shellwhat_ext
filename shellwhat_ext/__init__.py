@@ -281,8 +281,9 @@ def _cmdline_check_constraints(state, cmd, constraints, opts, msg=None, debug=No
             elif type(required) == PAT_TYPE:
                 if not required.search(arg):
                     _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match pattern "{}"'.format(arg, opt, cmd, required.pattern), msg, debug)
-            elif arg is None:
-                pass # required flag, but no value allowed
+            elif required is None:
+                if arg != '':
+                    _cmdline_fail(state, 'Flag "{}" for "{}" should not have argument but has {}'.format(opt, cmd, arg), msg, debug)
             elif arg != required:
                 _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match required "{}"'.format(arg, opt, cmd, required), msg, debug)
             del constraints[opt]
