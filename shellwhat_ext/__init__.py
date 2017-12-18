@@ -4,7 +4,7 @@ from getopt import getopt, GetoptError
 from protowhat.Test import TestFail
 from shellwhat.sct_syntax import state_dec
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 #-------------------------------------------------------------------------------
 
