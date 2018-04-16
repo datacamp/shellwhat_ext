@@ -1,6 +1,6 @@
 # shellwhat_ext
 
-Extensions to [shellwhat][http://github.com/datacamp/shellwhat] testing.
+Extensions to [shellwhat](http://github.com/datacamp/shellwhat) testing.
 
 ---
 
