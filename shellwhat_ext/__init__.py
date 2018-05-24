@@ -2,13 +2,11 @@ import os
 import re
 from getopt import getopt, GetoptError
 from protowhat.Test import TestFail
-from shellwhat.sct_syntax import state_dec
 
 __version__ = '0.1.2'
 
 #-------------------------------------------------------------------------------
 
-@state_dec
 def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
     '''Check if a file is line-by-line equal to another file (ignoring
     whitespace at the start and end of lines and blank lines at the
@@ -59,7 +57,6 @@ def _get_lines_from_file(state, filename):
 
 #-------------------------------------------------------------------------------
 
-@state_dec
 def test_file_perms(state, path, perms, message, debug=None):
     '''Test that something has the required permissions.'''
 
@@ -78,8 +75,7 @@ def test_file_perms(state, path, perms, message, debug=None):
 
 #-------------------------------------------------------------------------------
 
-@state_dec
-def test_output_does_not_contain(state, text, fixed=True, msg='Submission output contains "{}"'):
+def test_output_does_not_contain(state, text, fixed=True, msg='Submission output contains "{}", while it shouldn\'t'):
     '''Test that the output doesn't match.'''
 
     if fixed:
@@ -95,7 +91,6 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
 
 #-------------------------------------------------------------------------------
 
-@state_dec
 def test_show_student_code(state, msg):
     state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
 
@@ -104,8 +99,99 @@ def test_show_student_code(state, msg):
 PAT_TYPE = type(re.compile('x'))
 PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
-@state_dec
 def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug=None):
+    """
+    `test_cmdline` is used to test what learners typed on a shell command line.
+    It is more sophisticated than using regular expressions,
+    but simpler than parsing the user's input and check the AST.
+    Its design draws on Python's `optparse` library.
+    Its syntax is:
+
+    ```
+    def test_cmdline(pattern, redirect=None, msg='Error')
+    ```
+
+    where `pattern` is a pattern that the command line has to match,
+    `redirect` optionally specifies that redirection to a file is present,
+    and `msg` is the error message if the match fails.
+    For example:
+
+    ```
+    test_cmdline([['wc',   'l', '+'],
+            ['sort', 'nr'],
+            ['head', 'n:', None, {'-n' : '3'}]],
+            redirect=re.compile(r'.+\.txt'),
+                msg='Incorrect command line')
+    ```
+
+    will check command lines of the form:
+
+    ```
+    wc -l a.txt b.txt | sort -n -r | head -n 3 > result.txt
+    ```
+
+    `test_cmdline` works by tokenizing the actual command line (called `student` below),
+    checking that each chunk of the result matches the corresponding chunk of `pattern`,
+    and then checking that any extra constraints are also satisfied.
+
+    `pattern` is a list of lists that obeys the following rules:
+
+    1. If `redirect` is not `None`,
+    then `student` must end with a redirection `>` and a filename,
+    and the filename must match the regular expression provided.
+
+    1. Each element `pattern` must be a sublist of one or more elements.
+
+    1. Each sublist must start with a command name (such as `wc` or `ls`),
+    and must match the corresponding element of `student` after splitting on `|` symbols.
+
+    1. If the sublist contains a second element,
+    it must either be `None` (meaning "no command-line parameters accepted")
+    or an `optparse`-style argument specification (see below).
+    An empty string is *not* allowed.
+
+    1. If the sublist contains a third element,
+    it must be `None` (indicating that no trailing filenames are allowed),
+    `+` (indicating that one or more trailing filenames must be present),
+    or `*` (indicating that zero or more trailing filenames are allowed).
+
+    1. If the sublist contains a fourth element,
+    it must be a dictionary whose keys match command parameters
+    and whose values are either simple values (which must match exactly),
+    regular expressions (which must match),
+    or functions (which must return `True`).
+
+    The `optparse`-stye spec consists of one or more letters,
+    each of which may optionally be followed by `:` to indicate that it takes an argument.
+    For example, `nr` indicates that `-n` and `-r` must appear,
+    but can appear in any order,
+    while `n:` indicates that `-n` must appear and must be followed by an argument.
+    Thus,
+    the pattern in the example above:
+
+    ```
+    [['wc',   'l', '+'],
+    ['sort', 'nr'],
+    ['head', 'n:', None, {'n' : 3}]]
+    ```
+
+    matches:
+
+    - `wc`, `-l` without parameters, and one or more trailing filenames,
+    - `sort` with both `-n` and `-r` (in either order) but no trailing filenames, and
+    - `head` with `-n value`, where `value` must equal the integer 3.
+
+    Notes:
+
+    1. `test_cmdline` uses a list of lists rather than a dictionary mapping command names to specs
+    because we need to specify the order of commands,
+    and because a command may appear twice in one pipeline.
+
+    1. `test_cmdline` starts by checking that the number of piped commands
+        matches the length of the pattern specification,
+        and reports an error if it does not.
+    """
+
     line = _cmdline_select_line(state, last_line)
     actualCommands, actualRedirect = _cmdline_parse(state, line, msg, debug=debug)
     _cmdline_match_redirect(state, redirect, actualRedirect, msg, debug=debug)
@@ -296,3 +382,399 @@ def _cmdline_fail(state, internal, external, debug):
     if debug:
         report = '{} ({})'.format(report, internal)
     state.do_test(report)
+
+
+#-------------------------------------------------------------------------------
+
+import re
+from getopt import getopt, GetoptError
+
+rxc = re.compile
+RE_TYPE = type(rxc(''))
+RE_ARGS = rxc('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
+
+def tc_assert(state, condition, details, *extras):
+    '''
+    Fail if condition not true. Always report msg; report details if debug
+    set in state.
+    '''
+
+    if condition:
+        return
+    if hasattr(state, 'tc_debug') and state.tc_debug:
+        state.tc_msg = state.tc_msg + ':: ' + details.format(*extras)
+    state.do_test(state.tc_msg)
+
+
+def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, debug=False):
+    '''Test command line without fully parsing.
+
+    `test_cmdline_v2` tests a Unix command line containing pipes and output
+    redirection against a specification.  An example of its use is:
+
+        test_cmdline_v2(state,
+                       [['extract', '', [rxc(r'p.+\.txt'), {'data/b.csv', 'data/a.csv'}]],
+                       ['sort', 'n'],
+                       ['tail', 'n:', [], {'-n' : '3'}]],
+                       'Use extract, sort, and tail with redirection.',
+                       redirect_out=re.compile(r'.+\.csv'),
+                       last_line_only=True)
+
+    which will correctly match the command line:
+
+        '\n\nextract params.txt data/a.csv data/b.csv | sort -n | tail -n 3 > last.csv\n'
+
+    The required parameters to `test_cmdline` are:
+
+    -   The SCT state object.  If the function is called using
+        `Ex().test_cmdline(...)`, this parameter does not have to be supplied.
+
+    -   A list of sub-specifications, each of which matches a single
+        command in the pipeline.  The format is described below.
+
+    -   The error message to be presented to the user if the test fails.
+
+    Each sub-spec must have a command name and a getopt-style string
+    specifying any parameters it is allowed to take.  The command name
+    may be a list of strings as well, to handle things like `git commit`;
+    if the optstring is `None`, then no options are allowed.
+
+    The sub-spec may also optionally specify the filenames that are
+    expected (including sets if order doesn't matter and regular
+    expressions if variant paths are allowed) and a dictionary of
+    parameter values for options that take them.  The format of sub-specs
+    is described in more detail below.
+
+    The optional named parameters are:
+
+    -   `redirect_out`: where to redirect standard output.
+
+    -   `lastlineOnly`: if `True`, the user text is split on newlines and
+        only the last line is checked.  If `False`, the entire user input
+        is checked.  This is to handle cases where we need to set shell
+        variables or do other things in the sample solution that the user
+        isn't expected to do.
+
+    -   `debug`: if `True`, print internal debugging messages when things go
+        wrong.
+
+    In the simplest case, the filenames in a sub-spec is a list of actual
+    filenames, such as `['a.csv', 'b.csv']`.  However, it may also include
+    a *set* of filenames of length N, in which case the next N actual
+    filenames must exactly match the elements of the set.  A filespec
+    element may also be a regular expression instead of a simple string,
+    in which case the pattern and the actual filename must match.  For
+    example, the filespec:
+
+        ['params.txt', {'a.csv', 'b.csv'}, re.compile(r'.+\.csv')]
+
+    means:
+
+    -   The first actual filename must be `params.txt`.
+    -   The next two filenames must be `a.csv` and `b.csv` in any order.
+    -   The last filename must end with `.csv`.
+    -   (Implied) there must be exactly four filenames.
+
+    The dictionary argument of a sub-spec maps command flags to strings,
+    regular expressions, or functions of a single argument that test the
+    argument supplied with the flag.  Flags must be specified as `-n`
+    instead of just `n`, and test functions must return `True` or `False`.
+    For example, the constraints:
+
+        {'-a' : '5', '-b' : re.compile(r'^\d+$'), 'c' : lambda x: int(x) > 0}
+
+    means:
+
+    -   The argument of `-a` must be the string `5`.
+    -   The argument of `-b` must be a non-empty string of digits.
+    -   The argument of `-c` must parse to a positive integer.
+
+    Finally, a full command spec's last item may be an instance of the
+    class `Optional`, which means "one final command in the pipeline may
+    or may not be present".  This is allowed so that `test_cmdline` can
+    handle solution code of the form:
+
+        less a.csv | cat
+
+    where the trailing `cat` is needed in the solution to prevent
+    automated testing timing out, but won't be present when the student
+    enters an actual solution.
+
+    Things which are not handled (or not handled properly):
+
+    -   Correctly-quoted arguments in command lines are handled, but
+        incorrectly quoted arguments, or quoted arguments that contain
+        the pipe symbol '|', are not handled.
+
+    -   Input redirection is not currently handled.
+
+    -   Appending output with `>>` is not currently handled.
+
+    -   Actual command-line flags and parameters that are not included
+        in the optstring spec for a command are ignored.
+
+    To make the code easier to track, the user-supplied error message is
+    added as `state.tc_msg`.  This allows us to pass `state` everywhere
+    and get what we need.
+    '''
+
+    assert spec, 'Empty spec'
+
+    state.tc_debug = state.tc_debug or debug
+    state.tc_msg = msg
+
+    tc_assert(state, state.student_code, 'No student code provided')
+
+    chunks, redirect_actual = tc_parse_cmdline(state, last_line_only)
+    tc_check_redirect(state, redirect_out, redirect_actual)
+    spec, chunks = tc_handle_optional(state, spec, chunks)
+    for (s, c) in zip(spec, chunks):
+        tc_check_chunk(state, s, c)
+
+class Optional(object):
+    '''
+    Marker class for optional last command in a pipeline.
+    '''
+
+    def __init__(self, text='unspecified'):
+        self.text = text
+
+def tc_parse_cmdline(state, last_line_only=False):
+    '''
+    Parse the actual command line, returning a list of |-separated
+    chunks and the redirection (if any).
+    '''
+
+    line = state.student_code.strip()
+    if last_line_only:
+        line = line.split('\n')[-1]
+    else:
+        tc_assert(state, '\n' not in line, 'Command line contains newlines')
+    line, redirect = tc_get_redirect(state, line)
+    chunks = [tc_parse_chunk(state, line, c.strip()) for c in line.strip().split('|')]
+    return chunks, redirect
+
+
+def tc_get_redirect(state, line):
+    '''
+    Strip and return any trailing redirection in the actual command line.
+    '''
+
+    # No redirection.
+    if '>' not in line:
+        return line, None
+
+    tc_assert(state, line.count('>') <= 1,
+              'Line "{}" contains more than one ">"', line)
+
+    pre, post = [x.strip() for x in line.split('>')]
+
+    tc_assert(state, pre,
+              'Line "{}" cannot start with redirection', line)
+    tc_assert(state, post,
+              'Dangling ">" at end of "{}"', line)
+    tc_assert(state, '|' not in post,
+              'Line "{}" cannot redirect to something containing a pipe', line)
+
+    return pre, post
+
+
+def tc_parse_chunk(state, line, section):
+    '''
+    Parse one of the |-separated chunks of the actual command line
+    using regular expressions (which is very fallible, and I should
+    be ashamed of myself for doing it).
+    '''
+
+    section = section.strip()
+    tc_assert(state, section, 'Empty command section somewhere in line "{}"', line)
+    return [tc_strip_quotes(a) for a in RE_ARGS.findall(section)]
+
+
+def tc_strip_quotes(val):
+    '''
+    Strip matching single or double quotes from a token.
+    '''
+
+    # Properly quoted.
+    if (val.startswith('"') and val.endswith('"')) or \
+       (val.startswith("'") and val.endswith("'")):
+        return val[1:-1]
+
+    # Improperly quoted.
+    assert not (val.startswith('"') or val.endswith('"') or \
+                val.startswith("'") or val.endswith("'")), \
+        'Mis-quoted value "{}"'.format(val)
+
+    # Not quoted.
+    return val
+
+
+def tc_handle_optional(state, spec, chunks):
+    '''
+    Handle a trailing instance of Optional in a spec.  If the actual
+    command line has one more chunk than the spec minus the Optional,
+    strip it; otherwise, ignore the Optional.
+    '''
+
+    # Spec doesn't end with an Optional, so lengths must match.
+    if not isinstance(spec[-1], Optional):
+        tc_assert(state, len(spec) == len(chunks), 'Wrong number of sections in pipeline')
+        return spec, chunks
+
+    # Spec ends with an Optional that matches a chunk, so strip the last chunk.
+    if len(spec) == len(chunks):
+        return spec[:-1], chunks[:-1]
+
+    # Spec ends with an Optional and there's one less chunk, so strip the last chunk.
+    if len(spec) == (len(chunks) + 1):
+        return spec[:-1], chunks
+
+    # Pipeline length error.
+    tc_assert(state, False, 'Wrong number of sections in pipeline')
+
+
+def tc_check_redirect(state, redirect_out, redirect_actual):
+    '''
+    Check the redirection specification (if any) against the actual
+    redirection in the command line.
+    '''
+
+    if redirect_out is None:
+        tc_assert(state, not actual,
+                  'Redirect found when none expected "{}"', actual)
+    tc_match_str(state, redirect_out, redirect_actual,
+                 'Redirection filename {} not matched', redirect_actual)
+
+
+def tc_check_chunk(state, spec, tokens):
+    '''
+    Check that the tokens making up a single Unix command match a
+    specification.
+    '''
+
+    assert isinstance(spec, list) and (len(spec) > 0), \
+        'Non-list or empty command specification.'
+    assert isinstance(tokens, list) and (len(tokens) > 0), \
+        'Non-list or empty command token list.'
+
+    cmd, optstring, filespec, constraints = tc_unpack_spec(state, spec)
+    tokens = tc_check_command(state, cmd, tokens)
+    optargs, filenames = tc_get_optargs_filenames(state, cmd, optstring, tokens)
+    tc_check_constraints(state, cmd, constraints, optargs)
+    tc_check_files(state, cmd, filespec, filenames)
+
+
+def tc_get_optargs_filenames(state, cmd, optstring, tokens):
+    '''
+    Get the option/argument pairs and filenames, handling the case where
+    no options are allowed (optstring is None).
+    '''
+
+    try:
+        if optstring is None:
+            optargs, filenames = getopt(tokens, '')
+            tc_assert(state, not optargs,
+                      'No options allowed for "{}" but some found "{}"', cmd, optargs)
+        else:
+            optargs, filenames = getopt(tokens, optstring)
+    except GetoptError as e:
+        raise AssertionError(str(e))
+
+    return optargs, filenames
+
+
+def tc_unpack_spec(state, spec):
+    '''
+    Unpack the specification for single command.
+    '''
+
+    assert 1 <= len(spec) <= 4, \
+        'Spec must have 1-4 elements not "{}"'.format(spec)
+    cmd, optstring, filespec, constraints = spec[0], None, None, None
+    if len(spec) > 1: optstring = spec[1]
+    if len(spec) > 2: filespec = spec[2]
+    if len(spec) > 3: constraints = spec[3]
+    return cmd, optstring, filespec, constraints
+
+
+def tc_check_command(state, required, tokens):
+    '''
+    Check that the command in a chunk matches the spec.
+    '''
+
+    if isinstance(required, str):
+        tc_assert(state, required == tokens[0],
+                  'Expected command "{}" got "{}"', required, tokens[0])
+        tokens = tokens[1:]
+
+    elif isinstance(required, list):
+        num = len(required)
+        assert num > 0, \
+            'Multi-part command name cannot be empty'
+        tc_assert(state, required == tokens[:num],
+                  'Expected command "{}" got "{}"', required, tokens[:num])
+        tokens = tokens[num:]
+
+    else:
+        assert False, \
+            'Command spec "{}" not handled (type "{}")'.format(required, type(required))
+
+    return tokens
+
+
+def tc_check_constraints(state, cmd, constraints, actual):
+    '''
+    Check that the actual values satisfy the specification constraints.
+    '''
+
+    if not constraints:
+        return
+    for (opt, arg) in actual:
+        if opt in constraints:
+            required = constraints[opt]
+            tc_match_str(state, required, arg, \
+                         'Command "{}" option "{}" argument "{}" not matched', cmd, opt, arg)
+
+
+def tc_check_files(state, cmd, spec, actual):
+    '''
+    Check that actual files obey spec.
+    '''
+
+    while spec or actual:
+        tc_assert(state, spec and actual,
+                  'Trailing filenames for command "{}"', cmd)
+
+        if isinstance(spec[0], set):
+            num = len(spec[0])
+            tc_assert(state, num <= len(actual),
+                      'Command "{}" set "{}" too large for actual "{}"', cmd, spec[0], actual)
+            spec_set, spec = spec[0], spec[1:]
+            actual_list, actual = actual[:num], actual[num:]
+            tc_assert(state, spec_set == set(actual_list),
+                      'Command "{}" set "{}" does not match file list "{}"', cmd, spec_set, actual_list)
+
+        else:
+            tc_match_str(state, spec[0], actual[0], \
+                         'Expected filename {} not matched', spec[0])
+            spec, actual = spec[1:], actual[1:]
+
+
+def tc_match_str(state, required, actual, details, *extras):
+    '''
+    Check that an actual string matches what's required (either a string,
+    a regular expression, or a callable of one argument).
+    '''
+
+    if isinstance(required, str):
+        tc_assert(state, required == actual, details, *extras)
+    elif isinstance(required, RE_TYPE):
+        tc_assert(state, required.match(actual), details, *extras)
+    elif callable(required):
+        tc_assert(state, required(actual), details, *extras)
+    else:
+        assert False, 'String matching spec "{}" not supported'.format(spec)
+            
+
+

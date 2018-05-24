@@ -1,7 +1,7 @@
 import re
 import pytest
 from shellwhat_ext import \
-    test_cmdline, \
+    test_cmdline as _test_cmdline, \
     _cmdline_select_line, \
     _cmdline_parse, \
     _cmdline_get_redirect, \
@@ -13,13 +13,7 @@ from shellwhat_ext import \
     _cmdline_disassemble_pattern, \
     _cmdline_check_filenames, \
     _cmdline_check_constraints
-
-class State(object):
-    def __init__(self, student_code=''):
-        self.student_code = student_code
-
-    def do_test(self, msg):
-        raise Exception(msg)
+from helper import State
 
 
 def test_select_line_single_line_false():
@@ -37,7 +31,7 @@ def test_select_line_multi_line_false():
     assert _cmdline_select_line(State(text), False) == 'a\nb'
 
 
-def test_select_line_single_line_true():
+def test_select_line_multi_line_true():
     text = 'a\nb\n'
     assert _cmdline_select_line(State(text), True) == 'b'
 
@@ -328,12 +322,12 @@ def test_constraint_callable_mismatch():
 
 
 def test_overall_command_only_match():
-    test_cmdline(State('a'), [['a']])
+    _test_cmdline(State('a'), [['a']])
 
 
 def test_overall_command_only_mismatch():
     with pytest.raises(Exception):
-        test_cmdline(State('a'), [['b']])
+        _test_cmdline(State('a'), [['b']])
 
 
 def test_overall_pipeline():
@@ -341,11 +335,11 @@ def test_overall_pipeline():
     pattern = [['wc',   'l', '+'],
 	       ['sort', 'nr'],
 	       ['head', 'n:', None, {'-n' : '3'}]]
-    test_cmdline(State(actual), pattern, redirect=re.compile(r'.+\.txt'), msg='Incorrect command line')
+    _test_cmdline(State(actual), pattern, redirect=re.compile(r'.+\.txt'), msg='Incorrect command line')
 
 
 def test_debug_match_command():
     pattern = [['abc',   'l']]
     actual = 'wc -l'
     with pytest.raises(Exception):
-        test_cmdline(State(actual), pattern, debug='EXTRA MESSAGE')
+        _test_cmdline(State(actual), pattern, debug='EXTRA MESSAGE')
