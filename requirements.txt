@@ -1,5 +1,6 @@
 # pkg deps
 protowhat==0.6.2
+shellwhat==0.6.1
 
 # test deps
 pytest==3.5.0
