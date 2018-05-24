@@ -1,10 +1,6 @@
-# Ignore java files
-*.java
-*.class
 # Vim swapfiles
 .*.swp
 
-# Python ----------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -51,7 +47,6 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
-.pytest_cache/
 
 # Translations
 *.mo
@@ -72,6 +67,13 @@ target/
 
 # pyenv
 .python-version
+
+# Mac stuff
+.DS_Store
+tests/.DS_Store
+
+# pytest
+.pytest_cache/
 
 # Mac stuff -------------------------------------------------------------------
 .DS_Store
