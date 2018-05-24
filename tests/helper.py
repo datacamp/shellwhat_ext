@@ -1,13 +1,15 @@
-#-------------------------------------------------------------------------------
-# Placeholder State object for testing purposes.
+from protowhat.Reporter import Reporter
+from shellwhat.State import State
 
-
-class State(object):
-    def __init__(self, student_code='', msg='MAIN ERROR MESSAGE'):
-        self.student_code = student_code
-        self.tc_debug = True
-        self.tc_msg = ''
-
-    def do_test(self, msg):
-        raise Exception(msg)
-
+def prepare_state(student_code=''):
+    s = State(
+        student_code = student_code,
+        solution_code = "",
+        reporter = Reporter(),
+        pre_exercise_code = "",
+        student_result = None,
+        solution_result = None,
+        student_conn = None,
+        solution_conn = None)
+    s.tc_msg = "Fail"
+    return(s)

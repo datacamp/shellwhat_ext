@@ -207,28 +207,28 @@ def _cmdline_select_line(state, last_line):
 
 
 def _cmdline_parse(state, line, msg=None, debug=None):
-    stripped, redirect = _cmdline_get_redirect(state, line, msg)
+    stripped, redirect = _cmdline_get_redirect(state, line, msg, debug)
     commands = [_cmdline_parse_command(c.strip()) for c in stripped.strip().split('|')]
     return commands, redirect
 
 
-def _cmdline_get_redirect(state, text, msg=None):
+def _cmdline_get_redirect(state, text, msg=None, debug=None):
 
     if '>' not in text:
         return text, None
     if text.count('>') > 1:
-        _cmdline_fail(state, 'Command line can contain at most one ">"', msg)
+        _cmdline_fail(state, 'Command line can contain at most one ">"', msg, debug)
 
     pre, post = [x.strip() for x in text.split('>')]
 
     if not pre:
-        _cmdline_fail(state, 'Line cannot start with redirection', msg)
+        _cmdline_fail(state, 'Line cannot start with redirection', msg, debug)
     if not post:
-        _cmdline_fail(state, 'Dangling ">" at end of line', msg)
+        _cmdline_fail(state, 'Dangling ">" at end of line', msg, debug)
     if '|' in post:
-        _cmdline_fail(state, 'Cannot redirect to something containing a pipe "{}".format(post)', msg)
+        _cmdline_fail(state, 'Cannot redirect to something containing a pipe "{}".format(post)', msg, debug)
     if ' ' in post:
-        _cmdline_fail(state, 'Cannot redirect to something containin spaces "{}"'.format(post), msg)
+        _cmdline_fail(state, 'Cannot redirect to something containin spaces "{}"'.format(post), msg, debug)
 
     return pre, post
 
@@ -374,10 +374,10 @@ def _cmdline_check_constraints(state, cmd, constraints, opts, msg=None, debug=No
                 _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match required "{}"'.format(arg, opt, cmd, required), msg, debug)
             del constraints[opt]
     if constraints:
-        _cmdline_fail(state, 'Missing flag(s)'.format(cmd, ', '.join(constraints.keys())), msg, debug)
+        _cmdline_fail(state, 'Missing flag(s) {}'.format(cmd, ', '.join(constraints.keys())), msg, debug)
 
 
-def _cmdline_fail(state, internal, external, debug):
+def _cmdline_fail(state, internal, external, debug = None):
     report = external if external else ''
     if debug:
         report = '{} ({})'.format(report, internal)
@@ -401,10 +401,11 @@ def tc_assert(state, condition, details, *extras):
 
     if condition:
         return
-    if hasattr(state, 'tc_debug') and state.tc_debug:
-        state.tc_msg = state.tc_msg + ':: ' + details.format(*extras)
-    state.do_test(state.tc_msg)
 
+    if hasattr(state, 'tc_debug') and state.tc_debug:
+        state.tc_msg = state.tc_msg + ' :: ' + details.format(*extras)
+    state.do_test(state.tc_msg)
+    
 
 def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, debug=False):
     '''Test command line without fully parsing.
@@ -520,7 +521,7 @@ def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, d
 
     assert spec, 'Empty spec'
 
-    state.tc_debug = state.tc_debug or debug
+    state.tc_debug = debug
     state.tc_msg = msg
 
     tc_assert(state, state.student_code, 'No student code provided')
@@ -530,6 +531,8 @@ def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, d
     spec, chunks = tc_handle_optional(state, spec, chunks)
     for (s, c) in zip(spec, chunks):
         tc_check_chunk(state, s, c)
+
+    return state
 
 class Optional(object):
     '''
@@ -774,7 +777,7 @@ def tc_match_str(state, required, actual, details, *extras):
     elif callable(required):
         tc_assert(state, required(actual), details, *extras)
     else:
-        assert False, 'String matching spec "{}" not supported'.format(spec)
+        assert False, 'String matching spec not supported'
             
 
 
