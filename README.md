@@ -14,8 +14,7 @@ Running tests
 -------------
 
 ```
-pip install -r requirements.txt
-pip install -e .
-pytest
+make install
+make test
 ```
 
