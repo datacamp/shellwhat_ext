@@ -48,7 +48,7 @@ def _get_lines_from_file(state, filename):
     try:
         with open(filename, 'r') as stream:
            lines = [x.strip() for x in stream.readlines()]
-    except Exception as err:
+    except Exception:
         state.do_test('Unable to open file {}'.format(filename))
 
     while not lines[-1]:
@@ -379,7 +379,7 @@ def _cmdline_check_constraints(state, cmd, constraints, opts, msg=None, debug=No
                 _cmdline_fail(state, 'Argument "{}" of flag "{}" for "{}" does not match required "{}"'.format(arg, opt, cmd, required), msg, debug)
             del constraints[opt]
     if constraints:
-        _cmdline_fail(state, 'Missing flag(s) {}'.format(cmd, ', '.join(constraints.keys())), msg, debug)
+        _cmdline_fail(state, 'Missing flag(s) for {}: {}'.format(cmd, ', '.join(constraints.keys())), msg, debug)
 
 
 def _cmdline_fail(state, internal, external, debug = None):
@@ -649,8 +649,8 @@ def tc_check_redirect(state, redirect_out, redirect_actual):
     '''
 
     if redirect_out is None:
-        tc_assert(state, not actual,
-                  'Redirect found when none expected "{}"', actual)
+        tc_assert(state, not redirect_actual,
+                  'Redirect found when none expected "{}"', redirect_actual)
     tc_match_str(state, redirect_out, redirect_actual,
                  'Redirection filename {} not matched', redirect_actual)
 
