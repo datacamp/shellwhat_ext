@@ -2,11 +2,13 @@ import os
 import re
 from getopt import getopt, GetoptError
 from protowhat.Test import TestFail
+from shellwhat.sct_syntax import state_dec
 
 __version__ = '0.1.2'
 
 #-------------------------------------------------------------------------------
 
+@state_dec
 def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
     '''Check if a file is line-by-line equal to another file (ignoring
     whitespace at the start and end of lines and blank lines at the
@@ -38,7 +40,6 @@ def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None)
 
     return state # all good
 
-
 def _get_lines_from_file(state, filename):
     '''Return a list of whitespace-stripped lines from a file, or fail if
     the file cannot be found.  Remove blank lines from the end of the
@@ -57,6 +58,7 @@ def _get_lines_from_file(state, filename):
 
 #-------------------------------------------------------------------------------
 
+@state_dec
 def test_file_perms(state, path, perms, message, debug=None):
     '''Test that something has the required permissions.'''
 
@@ -75,6 +77,7 @@ def test_file_perms(state, path, perms, message, debug=None):
 
 #-------------------------------------------------------------------------------
 
+@state_dec
 def test_output_does_not_contain(state, text, fixed=True, msg='Submission output contains "{}", while it shouldn\'t'):
     '''Test that the output doesn't match.'''
 
@@ -91,6 +94,7 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
 
 #-------------------------------------------------------------------------------
 
+@state_dec
 def test_show_student_code(state, msg):
     state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
 
@@ -99,6 +103,7 @@ def test_show_student_code(state, msg):
 PAT_TYPE = type(re.compile('x'))
 PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
+@state_dec
 def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug=None):
     """
     `test_cmdline` is used to test what learners typed on a shell command line.
@@ -406,7 +411,7 @@ def tc_assert(state, condition, details, *extras):
         state.tc_msg = state.tc_msg + ' :: ' + details.format(*extras)
     state.do_test(state.tc_msg)
     
-
+@state_dec
 def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, debug=False):
     '''Test command line without fully parsing.
 
