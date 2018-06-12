@@ -3,8 +3,90 @@ import re
 from getopt import getopt, GetoptError
 from protowhat.Test import TestFail
 from shellwhat.sct_syntax import state_dec
+from shellwhat.checks import test_expr_error
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
+
+#-------------------------------------------------------------------------------
+
+# Make re.compile more accessible because it's used so often in tests.
+rxc = re.compile
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_condition(state, condition, msg):
+    '''Check whether a Boolean condition is satisfied, and if not,
+    report the error.  This can be used for tests like:
+
+        test_condition('.filiprc' in os.listdir('/home/repl'),
+                       "Home directory does not contain a .filiprc file")
+    '''
+
+    if not condition:
+        state.do_test(msg)
+    return state # all good
+
+#-------------------------------------------------------------------------------
+
+# Copied from shellwhat - should import instead.
+ANSI_REGEX = "(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]"
+def _strip_ansi(result):
+    return re.sub(ANSI_REGEX, '', result)
+
+@state_dec
+def test_output_condition(state, condition, msg, strip_ansi = True):
+    """Test whether the student's output passes an arbitrary condition.
+
+    Args:
+        state     : State instance describing student and solution code. Can be omitted if used with Ex().
+        condition : Lambda of one argument taking the text as input and returning True or False.
+        msg       : Feedback message if text does not pass test.
+        strip_ansi: whether to remove ANSI escape codes from output.
+    """
+
+    stu_output = state.student_result
+    if strip_ansi:
+        stu_output = _strip_ansi(stu_output)
+    return test_condition(state, condition(stu_output), msg)
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_file_content_condition(state, path, condition, msg):
+    """Test whether the content of a file passes a test.
+
+    Args:
+        state    : State instance.
+        path     : Path to file. Function fails if file does not exist.
+        condition: Lambda of one argument taking the content of the file as input and returning True or False.
+        msg      : Feedback message if text does not pass test.
+    """
+
+    try:
+        with open(path, 'r') as reader:
+            data = reader.read()
+            return test_condition(state, condition(data), msg)
+    except IOError:
+        state.do_test('Unable to open file "{}"'.format(path))
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_cwd(state, expected, msg=None):
+    """Test whether the user is in the expected directory.  This wraps a
+    rather inelegant shell expression, which we have to use because os.getcwd()
+    returns the directory the evaluator is running in, not the directory the
+    user has gone to in the shell.
+
+    See https://github.com/datacamp/learn-bugs/issues/62.
+    """
+
+    expr = "[[ $PWD == '{}' ]]".format(expected)
+    if msg is None:
+        msg = "Expected to be in {}".format(expected)
+    test_expr_error(state, expr, msg=msg)
+    return state
 
 #-------------------------------------------------------------------------------
 
@@ -78,7 +160,10 @@ def test_file_perms(state, path, perms, message, debug=None):
 #-------------------------------------------------------------------------------
 
 @state_dec
-def test_output_does_not_contain(state, text, fixed=True, msg='Submission output contains "{}", while it shouldn\'t'):
+def test_output_does_not_contain(state,
+                                 text,
+                                 fixed=True,
+                                 msg='Submission output contains "{}", while it shouldn\'t'):
     '''Test that the output doesn't match.'''
 
     if fixed:
@@ -86,7 +171,7 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
             state.do_test(msg.format(text))
 
     else:
-        pat = re.compile(text)
+        pat = rxc(text)
         if pat.search(state.student_result):
             state.do_test(msg.format(text))
 
@@ -96,12 +181,24 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
 
 @state_dec
 def test_show_student_code(state, msg):
+    """Debugging utility to show the student-submitted code. Must be last
+    in the chain, since it always fails."""
+
     state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_show_student_output(state, msg):
+    """Debugging utility to show the student's actual output. Must be last
+    in the chain, since it always fails."""
+
+    state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_result))
 
 #-------------------------------------------------------------------------------    
 
-PAT_TYPE = type(re.compile('x'))
-PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
+PAT_TYPE = type(rxc('x'))
+PAT_ARGS = rxc('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 @state_dec
 def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug=None):
@@ -394,7 +491,6 @@ def _cmdline_fail(state, internal, external, debug = None):
 import re
 from getopt import getopt, GetoptError
 
-rxc = re.compile
 RE_TYPE = type(rxc(''))
 RE_ARGS = rxc('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
