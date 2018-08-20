@@ -1,9 +1,7 @@
 import os
 import re
 from getopt import getopt, GetoptError
-from protowhat.Test import TestFail
 from shellwhat.sct_syntax import state_dec
-from shellwhat.checks import test_expr_error
 
 __version__ = '0.3.0'
 
@@ -18,6 +16,8 @@ rxc = re.compile
 def test_condition(state, condition, msg):
     '''Check whether a Boolean condition is satisfied, and if not,
     report the error.  This can be used for tests like:
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
 
         test_condition('.filiprc' in os.listdir('/home/repl'),
                        "Home directory does not contain a .filiprc file")
@@ -38,6 +38,8 @@ def _strip_ansi(result):
 def test_output_condition(state, condition, msg, strip_ansi = True):
     """Test whether the student's output passes an arbitrary condition.
 
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+
     Args:
         state     : State instance describing student and solution code. Can be omitted if used with Ex().
         condition : Lambda of one argument taking the text as input and returning True or False.
@@ -56,6 +58,8 @@ def test_output_condition(state, condition, msg, strip_ansi = True):
 def test_file_content_condition(state, path, condition, msg):
     """Test whether the content of a file passes a test.
 
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+
     Args:
         state    : State instance.
         path     : Path to file. Function fails if file does not exist.
@@ -73,28 +77,13 @@ def test_file_content_condition(state, path, condition, msg):
 #-------------------------------------------------------------------------------
 
 @state_dec
-def test_cwd(state, expected, msg=None):
-    """Test whether the user is in the expected directory.  This wraps a
-    rather inelegant shell expression, which we have to use because os.getcwd()
-    returns the directory the evaluator is running in, not the directory the
-    user has gone to in the shell.
-
-    See https://github.com/datacamp/learn-bugs/issues/62.
-    """
-
-    expr = "[[ $PWD == '{}' ]]".format(expected)
-    if msg is None:
-        msg = "Expected to be in {}".format(expected)
-    test_expr_error(state, expr, msg=msg)
-    return state
-
-#-------------------------------------------------------------------------------
-
-@state_dec
 def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
     '''Check if a file is line-by-line equal to another file (ignoring
     whitespace at the start and end of lines and blank lines at the
-    ends of files).'''
+    ends of files).
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+    '''
 
     actualList = _get_lines_from_file(state, actualFilename)
     expectList = _get_lines_from_file(state, expectFilename)
@@ -142,7 +131,10 @@ def _get_lines_from_file(state, filename):
 
 @state_dec
 def test_file_perms(state, path, perms, message, debug=None):
-    '''Test that something has the required permissions.'''
+    '''Test that something has the required permissions.
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+    '''
 
     if not os.path.exists(path):
         msg = '{} does not exist'.format(path)
@@ -201,7 +193,7 @@ PAT_TYPE = type(rxc('x'))
 PAT_ARGS = rxc('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 @state_dec
-def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug=None):
+def test_cmdline(state, pattern, redirect=None, incorrect_msg=None, last_line=False, debug=None):
     """
     `test_cmdline` is used to test what learners typed on a shell command line.
     It is more sophisticated than using regular expressions,
@@ -295,9 +287,9 @@ def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug
     """
 
     line = _cmdline_select_line(state, last_line)
-    actualCommands, actualRedirect = _cmdline_parse(state, line, msg, debug=debug)
-    _cmdline_match_redirect(state, redirect, actualRedirect, msg, debug=debug)
-    _cmdline_match_all_commands(state, pattern, actualCommands, msg, debug=debug)
+    actualCommands, actualRedirect = _cmdline_parse(state, line, incorrect_msg, debug=debug)
+    _cmdline_match_redirect(state, redirect, actualRedirect, incorrect_msg, debug=debug)
+    _cmdline_match_all_commands(state, pattern, actualCommands, incorrect_msg, debug=debug)
     return state
 
 
@@ -385,7 +377,7 @@ def _cmdline_match_command(state, pattern, actual, msg=None, debug=None):
     try:
         actual_opts, actual_extras = getopt(actual[1:], pat_optstring)
     except GetoptError as e:
-        raise TestFail(e)
+        state.do_test(str(e))
 
     # Check trailing filenames both ways.
     _cmdline_check_filenames(state, pat_cmd, pat_filespec, actual_extras, msg, debug)
@@ -526,10 +518,10 @@ def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, d
 
         '\n\nextract params.txt data/a.csv data/b.csv | sort -n | tail -n 3 > last.csv\n'
 
-    The required parameters to `test_cmdline` are:
+    The required parameters to `test_cmdline_v2` are:
 
     -   The SCT state object.  If the function is called using
-        `Ex().test_cmdline(...)`, this parameter does not have to be supplied.
+        `Ex().test_cmdline_v2(...)`, this parameter does not have to be supplied.
 
     -   A list of sub-specifications, each of which matches a single
         command in the pipeline.  The format is described below.

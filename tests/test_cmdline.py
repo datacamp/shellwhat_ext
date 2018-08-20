@@ -332,7 +332,7 @@ def test_overall_pipeline():
     pattern = [['wc',   'l', '+'],
 	       ['sort', 'nr'],
 	       ['head', 'n:', None, {'-n' : '3'}]]
-    _test_cmdline(ps(actual), pattern, redirect=re.compile(r'.+\.txt'), msg='Incorrect command line')
+    _test_cmdline(ps(actual), pattern, redirect=re.compile(r'.+\.txt'), incorrect_msg='Incorrect command line')
 
 
 def test_debug_match_command():
