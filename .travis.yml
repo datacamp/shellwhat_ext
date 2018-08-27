@@ -9,7 +9,7 @@ script: make test
 
 deploy:
   provider: pypi
-  user: machow
+  user: datacamp
   password:
     secure: UDt78qHD675ipxNbytMP69KCCwbC+vRFk3/vwQRuIGr8SxvZCp6G/xmtbqrDk7ede3tmGIZZ1nzsi+BysCmrKVYjEtuJWRNVIx/1jOyxNVxy2KtX3f12wrBusrKKhqTPJwKaXyaonQjfqU2L6pKHg/GF5K/MURQyOu4t1Rz4aFRxu0djc43r3jq0xasMW3hNit/ZkrYeCZIQqB9m7ks0nNgZ+LWfTVZM/fWWZ/IQfG8hn1+17Di+TZdBStwIKAd+hPfzRsMYuYn08BLSk29tSsIK8prcCPHRlJs/LVrbdNpsW6c/I8OQUk1mmkpAFrlm9UYsM/gpPiWozefqVBz76525Jka574ctv8+9JP8dpG8ue+VFCUFWemr7GztW6tuxoteEZGRdrKvIHUtSLxaIMwm2ofEnoNuSvzUXGpDJIMq8z8FHGcOJfPEwCgkqxcSDLiwR6VREj422mL0VSKyKZfS6ucRfSFO+cdp7E0yz21y2Bk5ippOYActDzpnhzjHcR+8c47wuiZBENGo+yWEO5jJlOii9Llg/CEGWKrxPpwI4IGo2rm+qR5G6IQHg/zieZBUHMkclpm9mA+D+r6Y3GrLMkj9HQe1K5Yj5M/X6+LbYsNfbF/ZpSDYVeHf5g1el5XJkkyg2HQhnbRo9UwKMizCbws+Dhm+bf7zu5eNJtFo=
   on:
