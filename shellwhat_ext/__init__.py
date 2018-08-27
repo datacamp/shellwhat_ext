@@ -1,10 +1,78 @@
 import os
 import re
 from getopt import getopt, GetoptError
-from protowhat.Test import TestFail
 from shellwhat.sct_syntax import state_dec
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
+
+#-------------------------------------------------------------------------------
+
+# Make re.compile more accessible because it's used so often in tests.
+rxc = re.compile
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_condition(state, condition, msg):
+    '''Check whether a Boolean condition is satisfied, and if not,
+    report the error.  This can be used for tests like:
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+
+        test_condition('.filiprc' in os.listdir('/home/repl'),
+                       "Home directory does not contain a .filiprc file")
+    '''
+
+    if not condition:
+        state.do_test(msg)
+    return state # all good
+
+#-------------------------------------------------------------------------------
+
+# Copied from shellwhat - should import instead.
+ANSI_REGEX = "(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]"
+def _strip_ansi(result):
+    return re.sub(ANSI_REGEX, '', result)
+
+@state_dec
+def test_output_condition(state, condition, msg, strip_ansi = True):
+    """Test whether the student's output passes an arbitrary condition.
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+
+    Args:
+        state     : State instance describing student and solution code. Can be omitted if used with Ex().
+        condition : Lambda of one argument taking the text as input and returning True or False.
+        msg       : Feedback message if text does not pass test.
+        strip_ansi: whether to remove ANSI escape codes from output.
+    """
+
+    stu_output = state.student_result
+    if strip_ansi:
+        stu_output = _strip_ansi(stu_output)
+    return test_condition(state, condition(stu_output), msg)
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_file_content_condition(state, path, condition, msg):
+    """Test whether the content of a file passes a test.
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+
+    Args:
+        state    : State instance.
+        path     : Path to file. Function fails if file does not exist.
+        condition: Lambda of one argument taking the content of the file as input and returning True or False.
+        msg      : Feedback message if text does not pass test.
+    """
+
+    try:
+        with open(path, 'r') as reader:
+            data = reader.read()
+            return test_condition(state, condition(data), msg)
+    except IOError:
+        state.do_test('Unable to open file "{}"'.format(path))
 
 #-------------------------------------------------------------------------------
 
@@ -12,7 +80,10 @@ __version__ = '0.2.0'
 def test_compare_file_to_file(state, actualFilename, expectFilename, debug=None):
     '''Check if a file is line-by-line equal to another file (ignoring
     whitespace at the start and end of lines and blank lines at the
-    ends of files).'''
+    ends of files).
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+    '''
 
     actualList = _get_lines_from_file(state, actualFilename)
     expectList = _get_lines_from_file(state, expectFilename)
@@ -60,7 +131,10 @@ def _get_lines_from_file(state, filename):
 
 @state_dec
 def test_file_perms(state, path, perms, message, debug=None):
-    '''Test that something has the required permissions.'''
+    '''Test that something has the required permissions.
+
+    THIS FUNCTION IS NOT TESTED AND SHOULD BE USED AT OWN RISK.
+    '''
 
     if not os.path.exists(path):
         msg = '{} does not exist'.format(path)
@@ -78,7 +152,10 @@ def test_file_perms(state, path, perms, message, debug=None):
 #-------------------------------------------------------------------------------
 
 @state_dec
-def test_output_does_not_contain(state, text, fixed=True, msg='Submission output contains "{}", while it shouldn\'t'):
+def test_output_does_not_contain(state,
+                                 text,
+                                 fixed=True,
+                                 msg='Submission output contains "{}", while it shouldn\'t'):
     '''Test that the output doesn't match.'''
 
     if fixed:
@@ -86,7 +163,7 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
             state.do_test(msg.format(text))
 
     else:
-        pat = re.compile(text)
+        pat = rxc(text)
         if pat.search(state.student_result):
             state.do_test(msg.format(text))
 
@@ -96,15 +173,27 @@ def test_output_does_not_contain(state, text, fixed=True, msg='Submission output
 
 @state_dec
 def test_show_student_code(state, msg):
+    """Debugging utility to show the student-submitted code. Must be last
+    in the chain, since it always fails."""
+
     state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_code))
+
+#-------------------------------------------------------------------------------
+
+@state_dec
+def test_show_student_output(state, msg):
+    """Debugging utility to show the student's actual output. Must be last
+    in the chain, since it always fails."""
+
+    state.do_test('{}:\n```\n{}\n```\n'.format(msg, state.student_result))
 
 #-------------------------------------------------------------------------------    
 
-PAT_TYPE = type(re.compile('x'))
-PAT_ARGS = re.compile('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
+PAT_TYPE = type(rxc('x'))
+PAT_ARGS = rxc('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
 @state_dec
-def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug=None):
+def test_cmdline(state, pattern, redirect=None, incorrect_msg=None, last_line=False, debug=None):
     """
     `test_cmdline` is used to test what learners typed on a shell command line.
     It is more sophisticated than using regular expressions,
@@ -198,9 +287,9 @@ def test_cmdline(state, pattern, redirect=None, msg=None, last_line=False, debug
     """
 
     line = _cmdline_select_line(state, last_line)
-    actualCommands, actualRedirect = _cmdline_parse(state, line, msg, debug=debug)
-    _cmdline_match_redirect(state, redirect, actualRedirect, msg, debug=debug)
-    _cmdline_match_all_commands(state, pattern, actualCommands, msg, debug=debug)
+    actualCommands, actualRedirect = _cmdline_parse(state, line, incorrect_msg, debug=debug)
+    _cmdline_match_redirect(state, redirect, actualRedirect, incorrect_msg, debug=debug)
+    _cmdline_match_all_commands(state, pattern, actualCommands, incorrect_msg, debug=debug)
     return state
 
 
@@ -288,7 +377,7 @@ def _cmdline_match_command(state, pattern, actual, msg=None, debug=None):
     try:
         actual_opts, actual_extras = getopt(actual[1:], pat_optstring)
     except GetoptError as e:
-        raise TestFail(e)
+        state.do_test(str(e))
 
     # Check trailing filenames both ways.
     _cmdline_check_filenames(state, pat_cmd, pat_filespec, actual_extras, msg, debug)
@@ -394,7 +483,6 @@ def _cmdline_fail(state, internal, external, debug = None):
 import re
 from getopt import getopt, GetoptError
 
-rxc = re.compile
 RE_TYPE = type(rxc(''))
 RE_ARGS = rxc('{}|{}|{}'.format(r'[^"\'\s]+', r"'[^']+'", r'"[^"]+"'))
 
@@ -430,10 +518,10 @@ def test_cmdline_v2(state, spec, msg, redirect_out=None, last_line_only=False, d
 
         '\n\nextract params.txt data/a.csv data/b.csv | sort -n | tail -n 3 > last.csv\n'
 
-    The required parameters to `test_cmdline` are:
+    The required parameters to `test_cmdline_v2` are:
 
     -   The SCT state object.  If the function is called using
-        `Ex().test_cmdline(...)`, this parameter does not have to be supplied.
+        `Ex().test_cmdline_v2(...)`, this parameter does not have to be supplied.
 
     -   A list of sub-specifications, each of which matches a single
         command in the pipeline.  The format is described below.

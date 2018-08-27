@@ -9,7 +9,7 @@ Extensions to [shellwhat](http://github.com/datacamp/shellwhat) testing.
 Including in a DataCamp course
 ------------------------------
 
-`shellwhat_ext` still has to be deployed to PyPI. More info coming soon.
+`shellwhat_ext` still has to be deployed to PyPI.
 
 Running tests
 -------------

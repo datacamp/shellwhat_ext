@@ -11,5 +11,5 @@ clean:
 	rm -rf shellwhat_ext.egg-info
 
 test: clean
-	export SHELLWHAT_PARSER='0' && pytest --cov=shellwhat_ext
+	pytest --cov=shellwhat_ext
 	codecov
