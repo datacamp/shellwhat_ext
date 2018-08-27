@@ -3,7 +3,7 @@ import re
 from getopt import getopt, GetoptError
 from shellwhat.sct_syntax import state_dec
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 #-------------------------------------------------------------------------------
 
