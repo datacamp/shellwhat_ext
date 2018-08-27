@@ -1,20 +1,30 @@
 import re
 import ast
+from os import path
 from setuptools import setup
 
 _version_re = re.compile(r'__version__\s+=\s+(.*)')
 
-with open('shellwhat_ext/__init__.py', 'rb') as f:
+PACKAGE_NAME = 'shellwhat_ext'
+HERE = path.abspath(path.dirname(__file__))
+with open(path.join(HERE, 'README.md'), encoding='utf-8') as fp:
+    README = fp.read()
+with open(path.join(HERE, PACKAGE_NAME, '__init__.py'), 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(
         f.read().decode('utf-8')).group(1)))
 
-setup(name='shellwhat_ext',
-      version=version,
-      description='Extensions to shellwhat testing',
-      url='https://github.com/datacamp/shellwhat_ext',
-      author='Greg Wilson',
-      author_email='greg@datacamp.com',
-      license='MIT',
-      packages=['shellwhat_ext'],
-      install_requires=['protowhat>=0.5.0', 'shellwhat'],
-      zip_safe=False)
+setup(
+    name='shellwhat-ext',
+    version=version,
+    packages=['shellwhat_ext'],
+    install_requires=['protowhat>=1.1.0', 'shellwhat>=1.0.0'],
+    description='Extensions to shellwhat testing',
+    long_description=README,
+    long_description_content_type='text/markdown',
+    license='GNU version 3',
+    author='Michael Chow',
+    author_email='michael@datacamp.com',
+    maintainer='Filip Schouwenaars',
+    maintainer_email='filip@datacamp.com',
+    url='https://github.com/datacamp/shellwhat_ext',
+)
