@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/datacamp/shellwhat_ext.svg?branch=master)](https://travis-ci.org/datacamp/sqlwhat_ext)
 [![codecov](https://codecov.io/gh/datacamp/shellwhat_ext/branch/master/graph/badge.svg)](https://codecov.io/gh/datacamp/shellwhat_ext)
 [![PyPI version](https://badge.fury.io/py/shellwhat-ext.svg)](https://badge.fury.io/py/shellwhat-ext)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fdatacamp%2Fshellwhat_ext.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fdatacamp%2Fshellwhat_ext?ref=badge_shield)
 
 Extensions to [shellwhat](http://github.com/datacamp/shellwhat) testing.
 
@@ -37,3 +38,7 @@ make install
 make test
 ```
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fdatacamp%2Fshellwhat_ext.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fdatacamp%2Fshellwhat_ext?ref=badge_large)
